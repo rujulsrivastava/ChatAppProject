@@ -1,139 +1,136 @@
+import 'package:chat_app_project/firebase_services/auth.dart';
+import 'package:chat_app_project/firebase_services/database.dart';
+import 'package:chat_app_project/pages/profile.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:chat_app_project/groups/list_of_groups.dart' as group;
+import 'package:chat_app_project/firebase_services/messaging.dart';
+import 'package:chat_app_project/customs/group_tile.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key, this.username}) : super(key: key);
   final String? username;
+
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
   TextEditingController searchContact = TextEditingController();
+  late Stream _groups;
+  Messaging messaging = Messaging();
+  static FirebaseAuth auth = FirebaseAuth.instance;
+  // String userName = auth.currentUser!.displayName!=null ? auth.currentUser!.displayName : "randomusername";
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: Builder(
-          builder: (context)
-            => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () { Scaffold.of(context).openDrawer(); },
-              // tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            )
-        ),
-        title: Text("Hi $widget.username"),
+            builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                  // tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+                )),
+        title: Text("Hi ${auth.currentUser!.displayName}"),
         centerTitle: true,
+        actions: [
+          IconButton(
+              onPressed: () {
+                googleSignOut(context);
+              },
+              icon: const Icon(Icons.logout)),
+          IconButton(
+              onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => Profile()));
+            },
+              icon: const Icon(Icons.person)),
+        ],
       ),
       drawer: Drawer(
-        width: MediaQuery.of(context).size.width/2,
+        width: MediaQuery.of(context).size.width / 2,
         elevation: 2,
-        child: Row(
+        child: Column(
           children: const [
-            Text("My Groups", style: TextStyle(fontSize: 35)),
-            Divider(height: 2, color: Colors.black87,),
-            Text("My Collections", style: TextStyle(fontSize: 35)),
-            Divider(height: 2, color: Colors.black87,),
+            Text("My Groups", style: TextStyle(fontSize: 20)),
+            Divider(
+              height: 2,
+              color: Colors.black87,
+            ),
+            Text("My Collections", style: TextStyle(fontSize: 20)),
+            Divider(
+              height: 2,
+              color: Colors.black87,
+            ),
           ],
         ),
       ),
-
-      body: Column(
-        children: [
-          Container(
-            color: Colors.teal,
-            height: MediaQuery.of(context).size.height/6,
-            width: MediaQuery.of(context).size.width,
-            child: Row(
-              children: [
-                TextField(
-                  // style: const TextStyle(color: Colors.black, backgroundColor: Colors.white),
-                  controller: searchContact,
-                  decoration: const InputDecoration(
-                      hintText: "Search for a group..",
-                      hintStyle: TextStyle(color: Colors.black12),
-                      enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black87, width: 1)),
-                      focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black87, width: 1))),
-                ),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.chat_bubble)),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.person)),
-
-              ],
-            ),
-          ),
-          ListView.builder(
-              itemCount: group.groupsList.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Title: ${group.groupsList[index]?.title}"),
-                      Text("Title: ${group.groupsList[index]?.description}"),
-                      const Divider(height: 2, color: Colors.black87,)
-                    ],
-                  ),
-                );
-              }
-          ),
-          searchBar(context, searchContact),
-          renderChats(context),
-
-
-        ],
-      )
-
+      body: SingleChildScrollView(
+        child: renderGroups(),
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: () { createGroupDialog(); },
+      child: const Icon(Icons.add)),
     );
   }
-  Widget searchBar(BuildContext context, TextEditingController controller){
-    return Container(
-      color: Colors.teal,
-      height: MediaQuery.of(context).size.height/8,
-      width: MediaQuery.of(context).size.width,
-      child: Row(
-        children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings)),
-          TextField(
-            style: const TextStyle(color: Colors.black, backgroundColor: Colors.white),
-            controller: controller,
-            decoration: const InputDecoration(
-                hintText: "Search for a group..",
-                hintStyle: TextStyle(color: Colors.black12),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.black87, width: 1)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.black87, width: 1))),
-          ),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.chat_bubble)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.person)),
 
+  createGroupDialog() {
+    TextEditingController controller = TextEditingController();
+    AlertDialog alert = AlertDialog(
+      title: const Text("Create a group chat!"),
+      content: Column(
+        children: [
+          TextField(controller: controller, decoration: const InputDecoration(hintText: "Add a group name"),),
         ],
       ),
+      actions: [
+        IconButton(onPressed: () {
+          createGroup(controller.text, auth.currentUser!.displayName!);
+          Navigator.of(context).pop();
+
+          },
+            icon: const Icon(Icons.check)),
+      ],
     );
+    showDialog(context: context, builder: (context) => alert) ;
   }
-  Widget renderChats(BuildContext context) {
-    return ListView.builder(
-        itemCount: group.groupsList.length,
-        itemBuilder: (context, int index) {
-          return SizedBox(
-            height: MediaQuery.of(context).size.height/8,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Title: ${group.groupsList[index]?.title}"),
-                Text("Title: ${group.groupsList[index]?.description}"),
-                const Divider(height: 2, color: Colors.black87,)
-              ],
-            ),
-          );
+
+  Widget renderGroups() {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance.collection('chatgroups').snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (!snapshot.hasData) {
+          return const Text("No groups");
+          // if(snapshot.data!['chatgroups'] != null) {
+          // print(snapshot.data['groups'].length);
+          // if(snapshot.data['groups'].length != 0) {
+        } else {
+          return ListView.builder(
+              itemCount: snapshot.data?.docs.length,
+              shrinkWrap: true,
+              itemBuilder: (context, index) {
+                DocumentSnapshot ds =
+                    snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
+                return GroupTile(
+                  groupName: ds["groupName"],
+                  // userName: auth.currentUser!.displayName!,
+                );
+              });
         }
+        //   else {
+        //     return Text("No groups");
+        //   }
+        // }
+        // else {
+        //   return Text("No groups");
+        // }
+        // }
+        // else {
+        //   return const Center(
+        //       child: CircularProgressIndicator()
+        //   );
+        // }
+      },
     );
   }
 }
-
-
-
-
-
