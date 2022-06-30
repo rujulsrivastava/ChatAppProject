@@ -1,6 +1,8 @@
+import 'package:chat_app_project/pages/signup.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_app_project/pages/home.dart';
+import 'package:chat_app_project/firebase_services/auth.dart' as authServices;
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -10,44 +12,7 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  void _completeLogin() {
-    Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => Home()));
-  }
-
-  // FirebaseAuth auth = FirebaseAuth.instance;
-
-  Future<void> signIn(BuildContext context,
-      {String? phone, String? password}) async {
-    FirebaseAuth auth = FirebaseAuth.instance;
-    if (phone != null && password != null) {
-      try {
-        // await firebaseAuth.signInWithEmailAndPassword(
-        //     email: email, password: password);
-
-        await auth.verifyPhoneNumber(
-            phoneNumber: phone,
-            verificationCompleted: (PhoneAuthCredential cred) async {
-              await auth.signInWithCredential(cred);
-              _completeLogin();
-            },
-            verificationFailed: (FirebaseAuthException authException) async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(authException.toString())));
-            },
-            codeSent: (String verificationID, int? resendToken) {},
-            codeAutoRetrievalTimeout: (String verificationID) {});
-        //
-      } catch (e) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please enter something.")));
-    }
-  }
-
+  late TextEditingController phoneController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,9 +20,10 @@ class _LoginState extends State<Login> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const TextField(
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
+          TextField(
+            controller: phoneController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
                 labelText: "Phone",
                 labelStyle: TextStyle(color: Colors.white),
                 enabledBorder: OutlineInputBorder(
@@ -65,26 +31,51 @@ class _LoginState extends State<Login> {
                 focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white, width: 1)),
               )),
-          const TextField(
-            obscureText: true,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: "Password",
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 1)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 1)),
+          TextField(),
+          const SizedBox(height: 20,),
+          // const TextField(
+          //   obscureText: true,
+          //     style: TextStyle(color: Colors.white),
+          //     decoration: InputDecoration(
+          //       labelText: "Password",
+          //       labelStyle: TextStyle(color: Colors.white),
+          //       enabledBorder: OutlineInputBorder(
+          //           borderSide: BorderSide(color: Colors.white, width: 1)),
+          //       focusedBorder: OutlineInputBorder(
+          //           borderSide: BorderSide(color: Colors.white, width: 1)),
+          //     )),
+          ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Colors.teal)),
+              onPressed: () {
+                authServices.signIn(context, phone: phoneController.text);
+                // authServices.googleSignIn(context);
+              },
+              child: const Text(
+                "Log in to your account",
+                style: TextStyle(color: Colors.white),
+              )),
+
+          ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Colors.teal)),
+              onPressed: () {
+                // authServices.signIn(context);
+                authServices.googleSignIn(context);
+              },
+              child: const Text(
+                "Sign in with Google",
+                style: TextStyle(color: Colors.white),
               )),
           ElevatedButton(
               style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.all(Colors.teal)),
               onPressed: () {
-                // signIn(context);
-                _completeLogin();
+                // authServices.signIn(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUp()));
               },
               child: const Text(
-                "Log in to your account",
+                "Create an account",
                 style: TextStyle(color: Colors.white),
               ))
         ],
@@ -92,3 +83,4 @@ class _LoginState extends State<Login> {
     );
   }
 }
+
