@@ -8,8 +8,8 @@ import 'package:chat_app_project/firebase_services/messaging.dart';
 import 'package:chat_app_project/customs/group_tile.dart';
 
 class Home extends StatefulWidget {
-  const Home({Key? key, this.username}) : super(key: key);
-  final String? username;
+  const Home({Key? key, required this.username}) : super(key: key);
+  final String username;
 
   @override
   State<Home> createState() => _HomeState();
@@ -17,7 +17,6 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   TextEditingController searchContact = TextEditingController();
-  late Stream _groups;
   Messaging messaging = Messaging();
   static FirebaseAuth auth = FirebaseAuth.instance;
   // String userName = auth.currentUser!.displayName!=null ? auth.currentUser!.displayName : "randomusername";
@@ -33,7 +32,7 @@ class _HomeState extends State<Home> {
                   },
                   // tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
                 )),
-        title: Text("Hi ${auth.currentUser!.displayName}"),
+        title: Text("Hi ${widget.username}"),
         centerTitle: true,
         actions: [
           IconButton(
@@ -43,7 +42,7 @@ class _HomeState extends State<Home> {
               icon: const Icon(Icons.logout)),
           IconButton(
               onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => Profile()));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const Profile()));
             },
               icon: const Icon(Icons.person)),
         ],
