@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,24 +9,39 @@ import 'package:chat_app_project/pages/home.dart';
 import 'package:chat_app_project/pages/login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-FutureOr<void> completeLogin(BuildContext context) {
+FutureOr<void> completeLogin(BuildContext context, String userName) {
+  late String username=userName;
   Navigator.pushReplacement(
-      context, MaterialPageRoute(builder: (context) => const Home()));
+      context,
+      MaterialPageRoute(builder: (context) => Home(username: username)));
 }
 
-Future<void> signIn(BuildContext context, {String? phone}) async {
+loadData() {
+  User user = Observable(_auth.onAuthStateChanged);
+
+  profile = user.switchMap((FirebaseUser u) {
+    if (u != null) {
+      return _db
+          .collection('users')
+          .document(u.uid)
+          .snapshots()
+          .map((snap) => snap.data);
+    } else {
+      return Observable.just({});
+    }
+  });
+}
+
+Future<void> signUp(BuildContext context, String phone, String userName, String password) async {
   FirebaseAuth auth = FirebaseAuth.instance;
   TextEditingController _codeController = TextEditingController();
   if (phone != null) {
     try {
-      // await firebaseAuth.signInWithEmailAndPassword(
-      //     email: email, password: password);
-
       await auth.verifyPhoneNumber(
           phoneNumber: phone,
           verificationCompleted: (PhoneAuthCredential cred) async {
             await auth.signInWithCredential(cred);
-            completeLogin(context);
+            completeLogin(context, userName);
           },
           verificationFailed: (FirebaseAuthException authException) async {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -34,7 +50,8 @@ Future<void> signIn(BuildContext context, {String? phone}) async {
           codeSent: (String verificationID, int? resendToken) {
             showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
+                builder: (context) =>
+                    AlertDialog(
                       title: const Text("Enter SMS Code"),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -47,14 +64,23 @@ Future<void> signIn(BuildContext context, {String? phone}) async {
                       actions: <Widget>[
                         ElevatedButton(
                           child: const Text("Done"),
-                          onPressed: () {
-                            final smsCode = _codeController.text.trim();
-                            PhoneAuthCredential credential =
+                          onPressed: () async {
+                            if (_codeController.text.isNotEmpty) {
+                              try {
+                                final smsCode = _codeController.text.trim();
+                                PhoneAuthCredential credential =
                                 PhoneAuthProvider.credential(
                                     verificationId: verificationID,
                                     smsCode: smsCode);
-                            auth.signInWithCredential(credential);
-                            completeLogin(context);
+                                await auth.signInWithCredential(credential);
+                                completeLogin(context, userName);
+                                addUser(phone, auth.currentUser!.uid, userName, password);
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Please enter the OTP properly")));
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter the OTP")));
+                            }
                           },
                         )
                       ],
@@ -64,7 +90,7 @@ Future<void> signIn(BuildContext context, {String? phone}) async {
       //
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+          .showSnackBar(SnackBar(content: Text(e.toString()+"error")));
     }
   } else {
     ScaffoldMessenger.of(context)
@@ -89,8 +115,7 @@ Future<User?> googleSignIn(BuildContext context) async {
       userCred = await firebaseAuth.signInWithCredential(cred);
     }
     var user = userCred.user;
-    userName = user?.displayName;
-    completeLogin(context);
+    completeLogin(context, user!.displayName!);
     return user;
   } catch (e) {
     ScaffoldMessenger.of(context)
@@ -123,24 +148,38 @@ Future<void> googleSignOut(BuildContext context) async {
   }
 }
 
-Future<void> createAccount(
-    String email, String password, String username) async {
-  try {
-    FirebaseAuth auth = FirebaseAuth.instance;
-    CollectionReference collectionReference =
-        FirebaseFirestore.instance.collection("users");
-    UserCredential userCredential = await auth.createUserWithEmailAndPassword(
-        email: email, password: password);
-    User currentUser = auth.currentUser!;
-    currentUser.updateDisplayName(username);
-    String uid = userCredential.user!.uid.toString();
-    collectionReference.add({
-      'userName': username,
-      'email': email,
-      'uid': uid,
-      'password': password,
-    });
-  } catch (e) {
-    print(e.toString());
-  }
+// Future<void> createAccount(BuildContext context, String? phone,
+//     String? password, String? username) async {
+//   FirebaseAuth auth = FirebaseAuth.instance;
+//   CollectionReference collectionReference =
+//   FirebaseFirestore.instance.collection("users");
+//   if (phone != null && password != null && username != null) {
+//     try {
+//       signUp(context, phone: phone);
+//       collectionReference.add({
+//         'userName': username,
+//         'uid': auth.currentUser!.uid,
+//         'password': password,
+//         'phone': phone,
+//       });
+//     } catch (e) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(content: Text(e.toString())));
+//     }
+//   }  else {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text("Please enter proper details")));
+//   }
+// }
+
+void addUser(String phone, String uid, String userName, String password){
+  FirebaseAuth auth = FirebaseAuth.instance;
+  CollectionReference collectionReference =
+  FirebaseFirestore.instance.collection("users");
+  collectionReference.add({
+    'userName': userName,
+    'uid': auth.currentUser!.uid,
+    'password': password,
+    'phone': phone,
+  });
 }
