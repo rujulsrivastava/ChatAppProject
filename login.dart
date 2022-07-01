@@ -1,8 +1,8 @@
 import 'package:chat_app_project/pages/signup.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chat_app_project/pages/splash.dart';
 import 'package:flutter/material.dart';
-import 'package:chat_app_project/pages/home.dart';
-import 'package:chat_app_project/firebase_services/auth.dart' as authServices;
+import '../customs/custom_text_field.dart';
+
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -12,75 +12,122 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  late TextEditingController phoneController = TextEditingController();
+  late TextEditingController userNameController = TextEditingController();
+  late TextEditingController pwdController = TextEditingController();
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blueAccent,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    return Material(
+      color: const Color(0xFF274CE0),
+      child: Column(
         children: [
-          TextField(
-            controller: phoneController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: "Phone",
-                labelStyle: TextStyle(color: Colors.white),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 1)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white, width: 1)),
-              )),
-          TextField(),
-          const SizedBox(height: 20,),
-          // const TextField(
-          //   obscureText: true,
-          //     style: TextStyle(color: Colors.white),
-          //     decoration: InputDecoration(
-          //       labelText: "Password",
-          //       labelStyle: TextStyle(color: Colors.white),
-          //       enabledBorder: OutlineInputBorder(
-          //           borderSide: BorderSide(color: Colors.white, width: 1)),
-          //       focusedBorder: OutlineInputBorder(
-          //           borderSide: BorderSide(color: Colors.white, width: 1)),
-          //     )),
-          ElevatedButton(
-              style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.teal)),
-              onPressed: () {
-                authServices.signIn(context, phone: phoneController.text);
-                // authServices.googleSignIn(context);
-              },
-              child: const Text(
-                "Log in to your account",
-                style: TextStyle(color: Colors.white),
-              )),
+          Container(
+            width: width,
+            height: height * 0.25,
+            alignment: Alignment.topLeft,
+            color: const Color(0xFF274CE0),
+            child: Padding(
+              padding: EdgeInsets.only(left: width / 10, bottom: 25),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                      padding: const EdgeInsets.all(0),
+                      alignment: Alignment.topLeft,
+                      color: Colors.white,
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_back)),
+                  const Text("Sign In",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            alignment: Alignment.bottomCenter,
+            width: width,
+            height: height * 0.75,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(left: width / 10, right: width/10, top: 25),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Welcome back",
+                    style: TextStyle(
+                      fontSize: 30,
+                      color: Color(0xFF043F4A),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Text(
+                    "Sign in to continue",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  customTextField("Username", "Enter your username", userNameController),
+                  const SizedBox(height: 26),
+                  customTextField("Password", "Enter your password", pwdController),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: GestureDetector(
+                      onTap: () {Navigator.push(context, MaterialPageRoute(builder: (context) => const Splash()));},
+                      child: const Text("Forgot password?",
+                        style: TextStyle(color: Color(0xFF274CE0), fontSize: 13, fontWeight: FontWeight.w800),),
+                    ),
+                  ),
+              const SizedBox(height: 20,),
+              MaterialButton(
+                height: 40,
+                minWidth: MediaQuery.of(context).size.width-(2*MediaQuery.of(context).size.width/10),
+                onPressed: userNameController.text.isNotEmpty && pwdController.text.isNotEmpty ? () => const SignUp() : null,
+                disabledColor: const Color(0xFF274CE0).withAlpha(60),
+                disabledTextColor: Colors.white,
+                color: const Color(0xFF274CE0),
+                textColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: const Text("Sign In"),
+              ),
+                  const SizedBox(height: 40,),
+                  GestureDetector(
+                      onTap: () {Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUp()));},
+                      child:
+                      Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Text("Don't have an account? ",
+                        style: TextStyle(color: Color(0xFF274CE0), fontSize: 12, fontWeight: FontWeight.w400),),
+                      Text("Sign up",
+                          style: TextStyle(color: Color(0xFF274CE0), fontSize: 12, fontWeight: FontWeight.w800),),
+                    ],
+                  )
+                  )
+                ],
+              ),
+            ),
+          ),
 
-          ElevatedButton(
-              style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.teal)),
-              onPressed: () {
-                // authServices.signIn(context);
-                authServices.googleSignIn(context);
-              },
-              child: const Text(
-                "Sign in with Google",
-                style: TextStyle(color: Colors.white),
-              )),
-          ElevatedButton(
-              style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.teal)),
-              onPressed: () {
-                // authServices.signIn(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const SignUp()));
-              },
-              child: const Text(
-                "Create an account",
-                style: TextStyle(color: Colors.white),
-              ))
         ],
       ),
     );
   }
 }
-
