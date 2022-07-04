@@ -8,12 +8,12 @@ import 'package:chat_app_project/pages/home.dart';
 import 'package:chat_app_project/pages/login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../customs/user_model.dart';
+import '../pages/splash.dart';
 
 FutureOr<void> completeLogin(BuildContext context, String userName) {
-  late String username=userName;
   Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => Home(username: username)));
+      MaterialPageRoute(builder: (context) => Home(userName: userName)));
 }
 
 Future<void> signIn(BuildContext context, String userName, String password) async {
@@ -107,7 +107,13 @@ Future<User?> googleSignIn(BuildContext context) async {
       userCred = await firebaseAuth.signInWithCredential(cred);
     }
     var user = userCred.user;
-    await createUser(MyUser(userName: user!.displayName!, dateOfCreation: Timestamp.now(), phone: user.phoneNumber, password: "", email: user.email));
+    final snapShot = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user!.uid) // varuId in your case
+        .get();
+    if (!snapShot.exists) {
+      createUser(MyUser(userName: user.displayName!, dateOfCreation: Timestamp.now(), phone: user.phoneNumber ?? "", password: "", email: user.email ?? ""));
+    }
     completeLogin(context, user.displayName!);
     return user;
   } catch (e) {
@@ -120,7 +126,7 @@ Future<User?> googleSignIn(BuildContext context) async {
 
 void completeSignOut(BuildContext context) {
   Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const Login()), (route) => false);
+      MaterialPageRoute(builder: (context) => const Splash()), (route) => false);
 }
 
 Future<void> signOut(BuildContext context) async {
