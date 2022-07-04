@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
-
+import 'package:chat_app_project/firebase_services/database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:chat_app_project/pages/home.dart';
 import 'package:chat_app_project/pages/login.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../customs/user_model.dart';
 
 FutureOr<void> completeLogin(BuildContext context, String userName) {
   late String username=userName;
@@ -16,25 +16,13 @@ FutureOr<void> completeLogin(BuildContext context, String userName) {
       MaterialPageRoute(builder: (context) => Home(username: username)));
 }
 
-loadData() {
-  User user = Observable(_auth.onAuthStateChanged);
+Future<void> signIn(BuildContext context, String userName, String password) async {
 
-  profile = user.switchMap((FirebaseUser u) {
-    if (u != null) {
-      return _db
-          .collection('users')
-          .document(u.uid)
-          .snapshots()
-          .map((snap) => snap.data);
-    } else {
-      return Observable.just({});
-    }
-  });
 }
 
 Future<void> signUp(BuildContext context, String phone, String userName, String password) async {
   FirebaseAuth auth = FirebaseAuth.instance;
-  TextEditingController _codeController = TextEditingController();
+  TextEditingController codeController = TextEditingController();
   if (phone != null) {
     try {
       await auth.verifyPhoneNumber(
@@ -57,7 +45,7 @@ Future<void> signUp(BuildContext context, String phone, String userName, String 
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           TextField(
-                            controller: _codeController,
+                            controller: codeController,
                           ),
                         ],
                       ),
@@ -65,18 +53,24 @@ Future<void> signUp(BuildContext context, String phone, String userName, String 
                         ElevatedButton(
                           child: const Text("Done"),
                           onPressed: () async {
-                            if (_codeController.text.isNotEmpty) {
+                            if (codeController.text.isNotEmpty) {
                               try {
-                                final smsCode = _codeController.text.trim();
+                                final smsCode = codeController.text.trim();
                                 PhoneAuthCredential credential =
                                 PhoneAuthProvider.credential(
                                     verificationId: verificationID,
                                     smsCode: smsCode);
-                                await auth.signInWithCredential(credential);
-                                completeLogin(context, userName);
-                                addUser(phone, auth.currentUser!.uid, userName, password);
+                                UserCredential user = await auth.signInWithCredential(credential);
+                                if (user != null) {
+                                  User? updateUser = FirebaseAuth.instance.currentUser;
+                                  await updateUser!.updateDisplayName(userName);
+                                  createUser(MyUser(userName: user.user!.displayName!, password: password, phone: user.user!.phoneNumber!, dateOfCreation: Timestamp.now(), email: ""));
+                                  // userSetup(user.user!.displayName!, password, user.user!.phoneNumber!, user.user!);
+                                  completeLogin(context, user.user!.displayName!);
+                                }
+
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Please enter the OTP properly")));
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter the OTP properly")));
                               }
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter the OTP")));
@@ -90,7 +84,7 @@ Future<void> signUp(BuildContext context, String phone, String userName, String 
       //
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString()+"error")));
+          .showSnackBar(SnackBar(content: Text("${e}error")));
     }
   } else {
     ScaffoldMessenger.of(context)
@@ -100,8 +94,6 @@ Future<void> signUp(BuildContext context, String phone, String userName, String 
 
 Future<User?> googleSignIn(BuildContext context) async {
   final firebaseAuth = FirebaseAuth.instance;
-  String? userName;
-
   try {
     UserCredential userCred;
     if (kIsWeb) {
@@ -115,18 +107,20 @@ Future<User?> googleSignIn(BuildContext context) async {
       userCred = await firebaseAuth.signInWithCredential(cred);
     }
     var user = userCred.user;
-    completeLogin(context, user!.displayName!);
+    await createUser(MyUser(userName: user!.displayName!, dateOfCreation: Timestamp.now(), phone: user.phoneNumber, password: "", email: user.email));
+    completeLogin(context, user.displayName!);
     return user;
   } catch (e) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(e.toString())));
     print(e);
   }
+  return null;
 }
 
 void completeSignOut(BuildContext context) {
   Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => Login()), (route) => false);
+      MaterialPageRoute(builder: (context) => const Login()), (route) => false);
 }
 
 Future<void> signOut(BuildContext context) async {
@@ -146,40 +140,4 @@ Future<void> googleSignOut(BuildContext context) async {
   } catch (e) {
     print(e);
   }
-}
-
-// Future<void> createAccount(BuildContext context, String? phone,
-//     String? password, String? username) async {
-//   FirebaseAuth auth = FirebaseAuth.instance;
-//   CollectionReference collectionReference =
-//   FirebaseFirestore.instance.collection("users");
-//   if (phone != null && password != null && username != null) {
-//     try {
-//       signUp(context, phone: phone);
-//       collectionReference.add({
-//         'userName': username,
-//         'uid': auth.currentUser!.uid,
-//         'password': password,
-//         'phone': phone,
-//       });
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text(e.toString())));
-//     }
-//   }  else {
-//     ScaffoldMessenger.of(context).showSnackBar(
-//         const SnackBar(content: Text("Please enter proper details")));
-//   }
-// }
-
-void addUser(String phone, String uid, String userName, String password){
-  FirebaseAuth auth = FirebaseAuth.instance;
-  CollectionReference collectionReference =
-  FirebaseFirestore.instance.collection("users");
-  collectionReference.add({
-    'userName': userName,
-    'uid': auth.currentUser!.uid,
-    'password': password,
-    'phone': phone,
-  });
 }
