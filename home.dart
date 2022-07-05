@@ -4,7 +4,6 @@ import 'package:chat_app_project/pages/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:chat_app_project/firebase_services/messaging.dart';
 import 'package:chat_app_project/customs/group_tile.dart';
 
 class Home extends StatefulWidget {
@@ -15,8 +14,9 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   TextEditingController searchContact = TextEditingController();
+  late final TabController _tabController = TabController(vsync: this, length: 2,);
   static FirebaseAuth auth = FirebaseAuth.instance;
   late Stream _groups;
 
@@ -32,7 +32,8 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF274CE0),
         leading: Builder(
-            builder: (context) => IconButton(
+            builder: (context) =>
+                IconButton(
                   icon: const Icon(Icons.menu),
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
@@ -41,6 +42,17 @@ class _HomeState extends State<Home> {
                 )),
         title: Text("Hi ${widget.userName}"),
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48.0),
+          child: Theme(
+            data: Theme.of(context).copyWith(focusColor: Colors.white),
+            child: Container(
+              height: 48.0,
+              alignment: Alignment.center,
+              child: TabPageSelector(controller: _tabController),
+            ),
+          ),
+        ),
         actions: [
           IconButton(
               onPressed: () {
@@ -56,7 +68,10 @@ class _HomeState extends State<Home> {
         ],
       ),
       drawer: Drawer(
-        width: MediaQuery.of(context).size.width / 2,
+        width: MediaQuery
+            .of(context)
+            .size
+            .width / 2,
         elevation: 2,
         child: Column(
           children: const [
@@ -73,19 +88,17 @@ class _HomeState extends State<Home> {
           ],
         ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+      body: SingleChildScrollView(
+        child: Column(
 
-          SingleChildScrollView(
-              //height: MediaQuery.of(context).size.height / 4,
-              child: renderUserGroups()),
-
-          SingleChildScrollView(
+            children: [
+              Container(child: SingleChildScrollView(scrollDirection: Axis.vertical, child: renderUserGroups())),
+              const Divider(thickness: 1,),
+              Container(child: SingleChildScrollView(scrollDirection: Axis.vertical, child: renderAllGroups())),
               // height: MediaQuery.of(context).size.height / 4,
-              child: renderAllGroups()),
-        ],
+            ]),
       ),
+
       floatingActionButton: FloatingActionButton(
           onPressed: () {
             createGroupDialog();
@@ -130,8 +143,9 @@ class _HomeState extends State<Home> {
             print(snapshot.data['usergroups'].length);
             if (snapshot.data['usergroups'].length != 0) {
               return ListView.builder(
-                  itemCount: snapshot.data['usergroups'].length,
-                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.data['usergroups'].length,
+                shrinkWrap: true,
                   itemBuilder: (context, index) {
                     int reqIndex =
                         snapshot.data['usergroups'].length - index - 1;
@@ -141,7 +155,10 @@ class _HomeState extends State<Home> {
                             snapshot.data['usergroups'][reqIndex]),
                         groupName: _destructureName(
                             snapshot.data['usergroups'][reqIndex]));
-                  });
+
+                  }
+
+                  );
             } else {
               return const Center(
                   child: Text(
@@ -150,7 +167,8 @@ class _HomeState extends State<Home> {
           } else {
             return const Center(
                 child:
-                    Text("You haven't joined any groups. Join or create one now!"));
+                Text(
+                    "You haven't joined any groups. Join or create one now!"));
           }
         } else {
           return const Center(child: Text("unable to fetch data"));
@@ -181,39 +199,33 @@ class _HomeState extends State<Home> {
   Widget renderAllGroups() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('chatgroups').snapshots(),
-      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-        if (!snapshot.hasData) {
-          return const Text("No groups");
-          // if(snapshot.data!['chatgroups'] != null) {
-          // print(snapshot.data['groups'].length);
-          // if(snapshot.data['groups'].length != 0) {
-        } else {
-          return ListView.builder(
-              itemCount: snapshot.data?.docs.length,
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                DocumentSnapshot ds =
+      builder: (context, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
+        if (snapshot.hasData) {
+            // print(snapshot.data!['chatgroups'].length);
+            if (snapshot.data?.size != 0) {
+              return ListView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: snapshot.data?.docs.length,
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    DocumentSnapshot ds =
                     snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
-                return GroupTile(
-                  groupName: ds["groupName"],
-                  groupId: ds.id,
-                  userName: ds["createdBy"],
-                );
-              });
+                    return GroupTile(
+                      groupName: ds["groupName"],
+                      groupId: ds.id,
+                      userName: ds["createdBy"],
+                    );
+                  });
+            }
+          else {
+            return const Text("No groups to be found");
+          }
+
+      } else {
+        return const Center(
+        child: CircularProgressIndicator()
+        );
         }
-        //   else {
-        //     return Text("No groups");
-        //   }
-        // }
-        // else {
-        //   return Text("No groups");
-        // }
-        // }
-        // else {
-        //   return const Center(
-        //       child: CircularProgressIndicator()
-        //   );
-        // }
       },
     );
   }
