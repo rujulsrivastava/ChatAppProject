@@ -8,6 +8,7 @@ class MyUser{
   late String? email;
   late Timestamp dateOfCreation;
   late List usergroups;
+  late String photo;
 
   MyUser({required this.userName, this.password, this.phone, this.email, required this.dateOfCreation});
 
@@ -18,5 +19,6 @@ class MyUser{
     phone = mapData["phone"];
     dateOfCreation = mapData["dateOfCreation"];
     usergroups = mapData["usergroups"];
+    photo = mapData["photo"];
   }
 }
