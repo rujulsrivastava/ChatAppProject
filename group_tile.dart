@@ -17,8 +17,8 @@ class GroupTile extends StatelessWidget {
         )));
       },
       child: SizedBox (
-        height: MediaQuery.of(context).size.height/4,
-        width: MediaQuery.of(context).size.height/4,
+        // height: MediaQuery.of(context).size.height/4,
+        // width: MediaQuery.of(context).size.height/4,
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: ListTile(
