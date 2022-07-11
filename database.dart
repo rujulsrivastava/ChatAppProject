@@ -24,7 +24,7 @@ Future<bool> checkIfCollectionExist(String uid) {
 }
 
 getUserChats(String uid) async {
-    return FirebaseFirestore.instance.collection("personalchats").where(FieldPath.documentId).snapshots();
+  return FirebaseFirestore.instance.collection("users").doc(uid).snapshots();
 }
 
 getUserGroupMessages(String groupId) async {
@@ -107,6 +107,7 @@ Future<void> createUser(MyUser user) async {
           "dateOfCreation" : user.dateOfCreation,
           "userchats" :[],
           "usergroups":[],
+          "photo" : "",
         }
     );
     // await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).collection("userchats").
