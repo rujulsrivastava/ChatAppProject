@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chat_app_project/firebase_services/database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -24,7 +25,6 @@ final userRef = FirebaseFirestore.instance.collection("users");
 class _ProfileState extends State<Profile> {
   final _formKey = GlobalKey<FormState>();
   late File? image;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +83,7 @@ class _ProfileState extends State<Profile> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
                       renderProfile(context),
                     ],
                   ),
@@ -101,28 +102,31 @@ class _ProfileState extends State<Profile> {
       future: userRef.doc(FirebaseAuth.instance.currentUser!.uid).get(),
       builder: (context, AsyncSnapshot snapshot) {
         if (!snapshot.hasData) {
-          return Text("Data not found");
+          return const Text("Data not found");
         } else {
           Map<String, dynamic> data = snapshot.data.data();
           MyUser user = MyUser.fromMap(data);
           userNameController.text = user.userName;
           phoneController.text = user.phone ?? "";
           emailController.text = user.email ?? "";
+          String? url = user.photo;
           return Form(
             key: _formKey,
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(15.0),
+                  padding: const EdgeInsets.all(7.0),
                   child: GestureDetector(
-                    onTap: imageChanger(context),
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(),
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () => imageChanger(context),
+                    child: url.isEmpty ? const CircleAvatar(
                       backgroundColor: Colors.teal,
                       radius: 50,
-                    ),
+                    ) : CircleAvatar(
+                      backgroundImage: NetworkImage(CachedNetworkImage(imageUrl: url)),
+            radius: 50,
                   ),
-                ),
+                ),),
                 Column(children: [
                   TextFormField(
                     validator: (value) {
@@ -190,10 +194,8 @@ class _ProfileState extends State<Profile> {
                     minWidth: MediaQuery.of(context).size.width -
                         (2 * MediaQuery.of(context).size.width / 10),
                     onPressed: () {
-                      // Validate returns true if the form is valid, or false otherwise.
+
                       if (_formKey.currentState!.validate()) {
-                        // If the form is valid, display a snackbar. In the real world,
-                        // you'd often call a server or save the information in a database.
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Processing Data'), duration: Duration(milliseconds: 500),),
                         );
@@ -220,7 +222,7 @@ class _ProfileState extends State<Profile> {
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext context) {
-        return Container(
+        return SizedBox(
           height: 100,
           // color: Colors.amber,
           child: Center(
@@ -228,8 +230,14 @@ class _ProfileState extends State<Profile> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                IconButton(onPressed: () {pickImageFromCamera(); Navigator.of(context).pop();}, icon: const Icon(Icons.camera_alt_outlined)),
-                IconButton(onPressed: () {pickImageFromGallery(); Navigator.of(context).pop();}, icon: const Icon(Icons.photo)),
+                IconButton(onPressed: () {
+                  pickImageFromCamera();
+                  // Navigator.of(context).pop();
+                  }, icon: const Icon(Icons.camera_alt_outlined)),
+                IconButton(onPressed: () {
+                  pickImageFromGallery();
+                  // Navigator.of(context).pop();
+                  }, icon: const Icon(Icons.photo)),
               ],
             ),
           ),
@@ -238,63 +246,35 @@ class _ProfileState extends State<Profile> {
     );
   }
 
+
+  late File _imageFile;
+  final picker = ImagePicker();
+
   Future pickImageFromGallery() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     setState(() {
-      if (pickedFile != null) {
-        image = File(pickedFile.path);
-        uploadFile();
-      } else {
-        print('No image selected.');
-      }
+      _imageFile = File(pickedFile!.path);
     });
   }
+
   Future pickImageFromCamera() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
     setState(() {
-      if (pickedFile != null) {
-        image = File(pickedFile.path);
-        uploadFile();
-      } else {
-        print('No image selected.');
-      }
+      _imageFile = File(pickedFile!.path);
     });
   }
-  Future uploadFile() async {
-    if (image == null) return;
-    final fileName = basename(image!.path);
-    final destination = 'files/$fileName';
 
-    try {
-      final ref = FirebaseStorage.instance
-          .ref(destination)
-          .child('file/');
-      await ref.putFile(image!);
-    } catch (e) {
-      print('error occured');
-    }
+  Future uploadImageToFirebase(BuildContext context) async {
+    String fileName = basename(_imageFile.path);
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference ref = storage.ref().child('uploads/$fileName');
+    UploadTask uploadTask = ref.putFile(_imageFile);
+    TaskSnapshot taskSnapshot = await uploadTask;
+    taskSnapshot.ref.getDownloadURL().then(
+          (value) => print("Done: $value"),
+    );
   }
 
-
-// renderAppBar(BuildContext context) {
-//   double height = MediaQuery.of(context).size.height;
-//   double width = MediaQuery.of(context).size.width;
-//   return PreferredSize(
-//     preferredSize: Size.fromHeight(height/7),
-//     child: Center(
-//       child: AppBar(
-//         elevation: 0,
-//         leadingWidth: 200,
-//         // centerTitle: true,
-//         backgroundColor: const Color(0xFF274CE0),
-//         title: Padding(
-//           padding: EdgeInsets.only(top: height/14),
-//           child: Text("My Profile", style: TextStyle(fontSize: 33)),
-//         ),
-//       ),
-//     ),
-//   );
-// }
 }
