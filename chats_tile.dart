@@ -45,37 +45,49 @@ class PersonalChatTile extends StatefulWidget {
   late String receiverName;
   final String senderID;
   final String receiverID;
-  late String chatID;
+  // late final chatID;
 
-  PersonalChatTile({required this.receiverName, required this.userName, required this.senderID, required this.receiverID
-  });
+  PersonalChatTile({Key? key, required this.receiverName, required this.userName, required this.senderID, required this.receiverID
+  }) : super(key: key);
 
   @override
   State<PersonalChatTile> createState() => _PersonalChatTileState();
 }
 
 class _PersonalChatTileState extends State<PersonalChatTile> {
+  var chatID;
   setChatID() {
     if (widget.senderID.hashCode <= widget.receiverID.hashCode) {
-      widget.chatID = '${widget.senderID}-${widget.receiverID}';
+      chatID = '${widget.senderID}-${widget.receiverID}-${widget.userName}-${widget.receiverName}';
+    } else if (widget.senderID == widget.receiverID){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something is fishy..")));
     } else {
-      widget.chatID = '${widget.receiverID}-${widget.senderID}';
+    chatID = '${widget.receiverID}-${widget.senderID}-${widget.receiverName}-${widget.userName}';
     }
   }
 
   @override
-  void initSuper(){
+  void initState(){
     super.initState();
-    setChatID();
+    if (widget.senderID.hashCode <= widget.receiverID.hashCode) {
+      chatID = '${widget.senderID}-${widget.receiverID}-${widget.userName}-${widget.receiverName}';
+    } else if (widget.senderID == widget.receiverID){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something is fishy..")));
+    } else {
+      chatID = '${widget.receiverID}-${widget.senderID}-${widget.receiverName}-${widget.userName}';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    print("receiver id " + widget.receiverID);
+    print("sender id " + widget.senderID);
+    print("chat id " + chatID);
     return GestureDetector(
       onTap: (){
         Navigator.push(context, MaterialPageRoute(builder: (context) => PersonalChatPage(senderID: widget.senderID,
           receiverID: widget.receiverID,
-          receiverName: widget.receiverName, chatID: widget.chatID,
+          receiverName: widget.receiverName, chatID: chatID,
         )));
       },
       child: SizedBox (
@@ -93,7 +105,6 @@ class _PersonalChatTileState extends State<PersonalChatTile> {
 
 
             title: Text(widget.receiverName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-            subtitle: const Text("Join the conversation", style: TextStyle(fontSize: 10.0, color: Colors.white)),
           ),
         ),
       ),
