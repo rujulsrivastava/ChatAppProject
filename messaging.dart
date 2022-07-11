@@ -11,11 +11,27 @@ sendMessageInGroup(String groupId, chatMessageData) {
   });
 }
 
-sendMessageInChat(String senderID, String receiverID, String docID, chatMessageData) {
+sendMessageInChat(String senderID, String receiverID, String docID, chatMessageData) async {
   CollectionReference personalchats = FirebaseFirestore.instance.collection('personalchats');
-  CollectionReference users = FirebaseFirestore.instance.collection('personalchats');
 
-  
+  DocumentReference senderDocRef = FirebaseFirestore.instance.collection('users').doc(senderID);
+  DocumentSnapshot senderDocSnapshot = await senderDocRef.get();
+  List<dynamic> senderChats= await senderDocSnapshot.get("userchats");
+
+  DocumentReference receiverDocRef = FirebaseFirestore.instance.collection('users').doc(receiverID);
+  DocumentSnapshot receiverDocSnapshot = await receiverDocRef.get();
+  List<dynamic> receiverChats= await receiverDocSnapshot.get("userchats");
+
+  if (senderChats.contains(docID) != true) {
+    await senderDocRef.update({
+      'userchats': FieldValue.arrayUnion([docID])
+    });
+  }
+  if (receiverChats.contains(docID) != true) {
+    await receiverDocRef.update({
+      'userchats': FieldValue.arrayUnion([docID])
+    });
+  }
 
   personalchats.doc(docID)
       .collection('messages')
@@ -26,6 +42,19 @@ sendMessageInChat(String senderID, String receiverID, String docID, chatMessageD
     'recentMessageSender': chatMessageData['sender'],
     'recentMessageTime': chatMessageData['time']
   });
+  // DocumentSnapshot d = await personalchats.doc(docID).get();
+  // if (d["peer1"] == null) {
+  //   await senderDocRef.update({
+  //     'peer1': senderDocSnapshot["userName"]
+  //   });
+  // }
+  // if (d["peer2"] == null) {
+  //   await senderDocRef.update({
+  //     'peer2': receiverDocSnapshot["userName"]
+  //   });
+  // }
+
+
 }
 
 // class Messaging {
