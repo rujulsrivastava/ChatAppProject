@@ -1,17 +1,38 @@
 import 'package:chat_app_project/customs/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-getGroupList() async {
-  var snapshot = await FirebaseFirestore.instance.collection("users").get();
-  return snapshot.docs;
+
+getAllUsers() async {
+  var snapshot = await FirebaseFirestore.instance.collection("users").snapshots();
+  return snapshot;
 }
 
 getUserGroups(String uid) async {
   return FirebaseFirestore.instance.collection("users").doc(uid).snapshots();
 }
 
-getChats(String groupId) async {
+Future<bool> checkIfCollectionExist(String uid) {
+  return FirebaseFirestore.instance.collection("users")
+      .doc(uid)
+      .collection("userchats")
+      .limit(1)
+      .get()
+      .then((value) {
+    return value.docs.isNotEmpty;
+  });
+}
+
+getUserChats(String uid) async {
+    return FirebaseFirestore.instance.collection("personalchats").where(FieldPath.documentId).snapshots();
+}
+
+getUserGroupMessages(String groupId) async {
   return FirebaseFirestore.instance.collection('chatgroups').doc(groupId).collection('messages').orderBy('time').snapshots();
+}
+
+getUserPersonalMessages(docID) async {
+  return FirebaseFirestore.instance.collection('personalchats').doc(docID).collection('messages').orderBy('time').snapshots();
 }
 
 Future togglingGroupJoin(String groupId, String groupName, String userName) async {
@@ -84,9 +105,11 @@ Future<void> createUser(MyUser user) async {
           "password" : user.password,
           "email" : user.email,
           "dateOfCreation" : user.dateOfCreation,
+          "userchats" :[],
           "usergroups":[],
         }
     );
+    // await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).collection("userchats").
   } catch (e) {print(e.toString());}
 }
 
@@ -103,9 +126,4 @@ updateProfileData(String userName, String? email, String? phone) async {
         }
     );
   } catch (e) {print(e.toString());}
-}
-
-Future<Map<String, dynamic>?> getUserData(String uid) async  {
-  var snapshot = await FirebaseFirestore.instance.collection("users").doc(uid).get();
-  return snapshot.data();
 }
