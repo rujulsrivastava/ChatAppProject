@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,7 @@ import 'package:chat_app_project/firebase_services/database.dart';
 import 'package:chat_app_project/customs/message_tile.dart';
 
 import '../firebase_services/messaging.dart';
+import '../utils/picking_images.dart';
 
 class PersonalChatPage extends StatefulWidget {
 
@@ -61,7 +64,7 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
         "time" : Timestamp.now()
       };
 
-      sendMessageInChat(widget.chatID, widget.receiverID, widget.chatID, chatMessageMap);
+      sendMessageInChat(widget.senderID, widget.receiverID, widget.chatID, chatMessageMap);
 
       setState(() {
         messageEditingController.text = "";
@@ -123,7 +126,7 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
 
                     GestureDetector(
                       onTap: () {
-                        _sendMessage();
+                        _attachImage;
                       },
                       child: Container(
                         height: 50.0,
@@ -132,7 +135,7 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
                             color: const Color(0xFF043F4A),
                             borderRadius: BorderRadius.circular(50)
                         ),
-                        child: const Center(child: Icon(Icons.send, color: Colors.white)),
+                        child: const Center(child: Icon(Icons.attach_file, color: Colors.white)),
                       ),
                     ),
                     GestureDetector(
@@ -159,4 +162,28 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
       ),
     );
   }
+
+  _attachImage(BuildContext context) {
+    FileUploads fileUploads = const FileUploads();
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 100,
+          // color: Colors.amber,
+          child: Center(
+            child: Row (
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.camera_alt_outlined)),
+                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.photo)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 }
