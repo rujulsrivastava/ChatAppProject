@@ -131,8 +131,15 @@ void completeSignOut(BuildContext context) {
 
 Future<void> signOut(BuildContext context) async {
   FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-  await firebaseAuth.signOut();
-  completeSignOut(context);
+  final GoogleSignIn googleSignIn = GoogleSignIn();
+
+  try {
+    await firebaseAuth.signOut();
+    await googleSignIn.signOut();
+    completeSignOut(context);
+  } catch (e) {
+    print(e);
+  }
 }
 
 Future<void> googleSignOut(BuildContext context) async {
