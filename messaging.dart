@@ -36,9 +36,10 @@ sendMessageInChat(String senderID, String receiverID, String docID, chatMessageD
   personalchats.doc(docID)
       .collection('messages')
       .add(chatMessageData);
+
   personalchats.doc(docID)
       .update({
-    'recentMessage': chatMessageData['message'],
+    'recentMessage': chatMessageData['message'] ?? chatMessageData['path'],
     'recentMessageSender': chatMessageData['sender'],
     'recentMessageTime': chatMessageData['time']
   });
