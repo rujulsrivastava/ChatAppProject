@@ -1,20 +1,30 @@
+import 'package:chat_app_project/firebase_services/database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_app_project/pages/group_chat_screen.dart';
 
 import '../pages/personal_chat_screen.dart';
-class GroupChatTile extends StatelessWidget {
+class GroupChatTile extends StatefulWidget {
   late String groupName;
   final String groupId;
 
-  GroupChatTile({Key? key, required this.groupName, required this.groupId
+  GroupChatTile({Key? key, required this.groupName, required this.groupId,
   }) : super(key: key);
 
   @override
+  State<GroupChatTile> createState() => _GroupChatTileState();
+}
+
+class _GroupChatTileState extends State<GroupChatTile> {
+
+
+  @override
   Widget build(BuildContext context) {
+
     return GestureDetector(
       onTap: (){
         Navigator.push(context, MaterialPageRoute(builder: (context) => GroupChatPage(
-          groupId: groupId, groupName: groupName,
+          groupId: widget.groupId, groupName: widget.groupName,
         )));
       },
       child: SizedBox (
@@ -27,12 +37,12 @@ class GroupChatTile extends StatelessWidget {
             leading: CircleAvatar(
               radius: 20.0,
               backgroundColor: Colors.white,
-              child: Text(groupName.substring(0, 1).toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF043F4A),)),
+              child: Text(widget.groupName.substring(0, 1).toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF043F4A),)),
             ),
 
 
-            title: Text(groupName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-            subtitle: const Text("Join the conversation", style: TextStyle(fontSize: 10.0, color: Colors.white)),
+            title: Text(widget.groupName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            // subtitle: const Text("Join the conversation", style: TextStyle(fontSize: 10.0, color: Colors.white)),
           ),
         ),
       ),
@@ -80,9 +90,9 @@ class _PersonalChatTileState extends State<PersonalChatTile> {
 
   @override
   Widget build(BuildContext context) {
-    print("receiver id " + widget.receiverID);
-    print("sender id " + widget.senderID);
-    print("chat id " + chatID);
+    print("receiver id ${widget.receiverID}");
+    print("sender id ${widget.senderID}");
+    print("chat id $chatID");
     return GestureDetector(
       onTap: (){
         Navigator.push(context, MaterialPageRoute(builder: (context) => PersonalChatPage(senderID: widget.senderID,
