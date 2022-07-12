@@ -21,6 +21,6 @@ class MyUser{
     dateOfCreation = mapData["dateOfCreation"];
     userchats = mapData["userchats"];
     usergroups = mapData["usergroups"];
-    photo = mapData["photo"];
+    photo = mapData["photo"] ?? "";
   }
 }
