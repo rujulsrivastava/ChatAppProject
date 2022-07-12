@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chat_app_project/firebase_services/database.dart';
 import 'package:chat_app_project/customs/message_tile.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart';
 
 import '../firebase_services/messaging.dart';
 import '../utils/picking_images.dart';
@@ -42,11 +45,19 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
         return snapshot.hasData ?  ListView.builder(
             itemCount: snapshot.data?.docs.length,
             itemBuilder: (context, index){
-              return MessageTile(
+              return snapshot.data?.docs[index].data()["messageType"] == 0 ?
+              MessageTile(
                   message: snapshot.data?.docs[index].data()["message"],
                   sender: snapshot.data?.docs[index].data()["sender"],
                   sentByMe: FirebaseAuth.instance.currentUser!.displayName == snapshot.data?.docs[index].data()["sender"],
-                  time: snapshot.data?.docs[index].data()["time"]
+                  time: snapshot.data?.docs[index].data()["time"],
+                messageType: snapshot.data?.docs[index].data()["messageType"],
+              ) : MessageTile(
+              path: snapshot.data?.docs[index].data()["path"],
+              sender: snapshot.data?.docs[index].data()["sender"],
+              sentByMe: FirebaseAuth.instance.currentUser!.displayName == snapshot.data?.docs[index].data()["sender"],
+              time: snapshot.data?.docs[index].data()["time"],
+              messageType: snapshot.data?.docs[index].data()["messageType"],
               );
             }
         )
@@ -61,7 +72,8 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
       Map<String, dynamic> chatMessageMap = {
         "message": messageEditingController.text,
         "sender": FirebaseAuth.instance.currentUser!.displayName,
-        "time" : Timestamp.now()
+        "time" : Timestamp.now(),
+        "messageType" : 0
       };
 
       sendMessageInChat(widget.senderID, widget.receiverID, widget.chatID, chatMessageMap);
@@ -69,6 +81,19 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
       setState(() {
         messageEditingController.text = "";
       });
+    }
+  }
+
+  _sendImage(String url) {
+    if (_imageFile !=null) {
+      Map<String, dynamic> chatMessageMap = {
+        "path" : url,
+        "sender": FirebaseAuth.instance.currentUser!.displayName,
+        "time" : Timestamp.now(),
+        "messageType" : 1
+      };
+
+      sendMessageInChat(widget.senderID, widget.receiverID, widget.chatID, chatMessageMap);
     }
   }
 
@@ -126,7 +151,7 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
 
                     GestureDetector(
                       onTap: () {
-                        _attachImage;
+                        _attachImage(context);
                       },
                       child: Container(
                         height: 50.0,
@@ -163,8 +188,12 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
     );
   }
 
+  late File _imageFile;
+  File? profilePhoto;
+  final picker = ImagePicker();
+  late String imageURL;
+
   _attachImage(BuildContext context) {
-    FileUploads fileUploads = const FileUploads();
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext context) {
@@ -176,13 +205,60 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.camera_alt_outlined)),
-                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.photo)),
+                IconButton(onPressed: () {
+                  pickImageFromCamera();
+                  Navigator.of(context).pop();
+                  }, icon: const Icon(Icons.camera_alt_outlined)),
+                IconButton(onPressed: () {
+                  pickImageFromGallery();
+                  Navigator.of(context).pop();
+                  }, icon: const Icon(Icons.photo)),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Future pickImageFromGallery() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        imageURL = pickedFile.path;
+      });
+    }
+
+    if (pickedFile != null) {
+      uploadImageToFirebase(_imageFile.path);
+    }
+  }
+
+  Future pickImageFromCamera() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        imageURL = pickedFile.path;
+      });
+    }
+
+    if (pickedFile != null) {
+      uploadImageToFirebase(_imageFile.path);
+    }
+  }
+
+  Future uploadImageToFirebase(String path) async {
+    String fileName = basename(path);
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference ref = storage.ref().child('uploads/$fileName');
+    UploadTask uploadTask = ref.putFile(_imageFile);
+    TaskSnapshot taskSnapshot = await uploadTask;
+    taskSnapshot.ref.getDownloadURL().then(
+            (value) => _sendImage(value)
     );
   }
 
