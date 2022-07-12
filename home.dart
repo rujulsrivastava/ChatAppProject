@@ -24,9 +24,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   );
   static FirebaseAuth auth = FirebaseAuth.instance;
   late Stream _groups;
+  late Stream _allGroups;
   Stream? _chats;
   late Stream _users;
   String? recName;
+  List<DocumentSnapshot> _foundUsers = [];
 
   @override
   void initState() {
@@ -34,6 +36,8 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     _getUserJoinedGroups();
     _getAllUsers();
     _getUserChats();
+    _getAllGroups();
+    // _foundUsers= _allGroups;
     tabController.addListener(_handleTabIndex);
   }
 
@@ -78,8 +82,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
               icon: const Icon(Icons.logout)),
           IconButton(
               onPressed: () {
-                WidgetsBinding.instance.addPostFrameCallback((timeStamp) { Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const Profile()));});
+                WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const Profile()));
+                });
               },
               icon: const Icon(Icons.person)),
         ],
@@ -106,7 +112,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         SingleChildScrollView(
             scrollDirection: Axis.vertical, child: renderUserChats()),
         SingleChildScrollView(
-            scrollDirection: Axis.vertical, child: renderAllGroups()),
+            scrollDirection: Axis.vertical, child: renderUserGroups()),
         // height: MediaQuery.of(context).size.height / 4,
       ]),
       floatingActionButton: bottomButtons(),
@@ -128,11 +134,13 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       ),
       actions: [
         IconButton(
-            onPressed: controller.text.isNotEmpty ? () {
-              createGroup(controller.text, auth.currentUser!.displayName!,
-                  auth.currentUser!.uid);
-              Navigator.of(context).pop();
-            } : null,
+            onPressed: controller.text == null
+                ? null
+                : () {
+                    createGroup(controller.text, auth.currentUser!.displayName!,
+                        auth.currentUser!.uid);
+                    Navigator.of(context).pop();
+                  },
             icon: const Icon(Icons.check)),
       ],
     );
@@ -142,50 +150,46 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   findUsersDialog() {
     TextEditingController controller = TextEditingController();
     AlertDialog alert = AlertDialog(
-      title: const Text("New conversation..!"),
+      title: const Text("New conversation"),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "Search now!"),
+          // TextField(
+          //   controller: controller,
+          //   decoration: const InputDecoration(hintText: "Search now!"),
+          // ),
+          StreamBuilder(
+            stream: _users,
+            builder: (context, AsyncSnapshot<dynamic> snapshot) {
+              if (snapshot.hasData) {
+                if (snapshot.data != null) {
+                  print("length is");
+                  return Container(
+                    height: 400,
+                    width: 200,
+                    child: ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: snapshot.data?.docs.length,
+                        shrinkWrap: true,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot ds = snapshot.data?.docs[index]
+                              as DocumentSnapshot<Object?>;
+                          return PersonalChatTile(
+                              senderID: auth.currentUser!.uid,
+                              userName: auth.currentUser!.displayName!,
+                              receiverID: ds.id,
+                              receiverName: ds["userName"]);
+                        }),
+                  );
+                } else {
+                  return const Center(child: Text("Talk to someone!"));
+                }
+              } else {
+                return const Center(child: Text("unable to fetch data"));
+              }
+            },
           ),
-      StreamBuilder(
-        stream: _users,
-        builder: (context, AsyncSnapshot<dynamic> snapshot) {
-          if (snapshot.hasData) {
-            if (snapshot.data != null) {
-              print("length is");
-                return Container(
-                  height: 400,
-                  width: 200,
-                  child: ListView.builder(
-                    scrollDirection: Axis.vertical,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: snapshot.data?.docs.length,
-                      shrinkWrap: true,
-                      itemBuilder: (context, index) {
-                        DocumentSnapshot ds =
-                        snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
-                        return PersonalChatTile(
-                          senderID: auth.currentUser!.uid,
-                          userName: auth.currentUser!.displayName!,
-                          receiverID: ds.id,
-                          receiverName: ds["userName"]
-                        );
-                      }),
-                );
-
-            } else {
-              return const Center(
-                  child: Text(
-                      "Talk to someone!"));
-            }
-          } else {
-            return const Center(child: Text("unable to fetch data"));
-          }
-        },
-      ),
         ],
       ),
       actions: [
@@ -198,7 +202,79 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     );
     showDialog(context: context, builder: (context) => alert);
   }
-  
+
+  findGroupsDialog() {
+    TextEditingController controller = TextEditingController();
+    String searchText = '';
+    AlertDialog alert = AlertDialog(
+      title: const Text("Available groups"),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // TextField(
+            //   controller: controller,
+            //   decoration: const InputDecoration(hintText: "Group name.."),
+            //   onChanged: (value) {
+            //     setState(() {
+            //       searchText = value;
+            //     });
+            //   },
+            // ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection("chatgroups").snapshots(),
+              builder: (context, AsyncSnapshot snapshot) {
+                if (snapshot.hasData) {
+                  List<DocumentSnapshot> documents = snapshot.data.docs;
+                  // if (searchText.isNotEmpty) {
+                  //   documents = documents.where((element) {
+                  //     return element
+                  //         .get('groupName')
+                  //         .toString()
+                  //         .contains(searchText);
+                  //   }).toList();
+                  // }
+
+                    print("length issss");
+                    print(documents.length);
+                    print(documents.first.data());
+
+                    return Container(
+                      height: 400,
+                      width: 200,
+                      child: ListView.builder(
+                          scrollDirection: Axis.vertical,
+                          itemCount: documents.length,
+                          shrinkWrap: true,
+                          itemBuilder: (context, index) {
+                            DocumentSnapshot ds = documents[index];
+                            return GroupChatTile(
+                              groupName: ds["groupName"],
+                              groupId: ds.id,
+                            );
+                          }),
+                    );
+
+
+                } else {
+                  return const Center(child: Text("unable to fetch data"));
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            icon: const Icon(Icons.close)),
+      ],
+    );
+    showDialog(context: context, builder: (context) => alert);
+  }
+
   Widget renderUserChats() {
     return StreamBuilder(
       stream: _chats,
@@ -216,21 +292,18 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     int reqIndex =
                         snapshot.data['userchats'].length - index - 1;
                     return PersonalChatTile(
-                      senderID: auth.currentUser!.uid,
-                      userName: auth.currentUser!.displayName!,
-                      receiverID: _destructureChatReceiverId(snapshot.data['userchats'][reqIndex]),
-                      receiverName: _destructureChatReceiverName(snapshot.data['userchats'][reqIndex])
-                       );
+                        senderID: auth.currentUser!.uid,
+                        userName: auth.currentUser!.displayName!,
+                        receiverID: _destructureChatReceiverId(
+                            snapshot.data['userchats'][reqIndex]),
+                        receiverName: _destructureChatReceiverName(
+                            snapshot.data['userchats'][reqIndex]));
                   });
             } else {
-              return const Center(
-                  child: Text(
-                      "You haven't talked to anyone."));
+              return const Center(child: Text("You haven't talked to anyone."));
             }
           } else {
-            return const Center(
-                child: Text(
-                    "Talk to someone!"));
+            return const Center(child: Text("Talk to someone!"));
           }
         } else {
           return const Center(child: Text("unable to fetch data"));
@@ -239,7 +312,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget renderAllUsers(){
+  Widget renderAllUsers() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context,
@@ -253,7 +326,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 shrinkWrap: true,
                 itemBuilder: (context, index) {
                   DocumentSnapshot ds =
-                  snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
+                      snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
                   return PersonalChatTile(
                     senderID: auth.currentUser!.uid,
                     receiverID: ds.id,
@@ -280,6 +353,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             print("length is");
             print(snapshot.data['usergroups'].length);
             if (snapshot.data['usergroups'].length != 0) {
+              print("Reached here as well");
               return ListView.builder(
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: snapshot.data['usergroups'].length,
@@ -287,6 +361,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   itemBuilder: (context, index) {
                     int reqIndex =
                         snapshot.data['usergroups'].length - index - 1;
+                    print(reqIndex);
                     return GroupChatTile(
                         groupId: _destructureGroupId(
                             snapshot.data['usergroups'][reqIndex]),
@@ -310,35 +385,74 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget renderAllGroups() {
-    return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('chatgroups').snapshots(),
-      builder: (context,
-          AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
-        if (snapshot.hasData) {
-          // print(snapshot.data!['chatgroups'].length);
-          if (snapshot.data?.size != 0) {
-            return ListView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: snapshot.data?.docs.length,
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  DocumentSnapshot ds =
-                      snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
-                  return GroupChatTile(
-                    groupName: ds["groupName"],
-                    groupId: ds.id,
-                  );
-                });
-          } else {
-            return const Text("No groups to be found");
-          }
-        } else {
-          return const Center(child: CircularProgressIndicator());
-        }
-      },
-    );
-  }
+  // Widget renderAllGroups() {
+  //   return StreamBuilder(
+  //     stream: FirebaseFirestore.instance.collection('chatgroups').snapshots(),
+  //     builder: (context,
+  //         AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
+  //
+  //
+  //       if (snapshot.hasData) {
+  //         // print(snapshot.data!['chatgroups'].length);
+  //         if (snapshot.data?.size != 0) {
+  //           if (searchText.length > 0) {
+  //             documents = documents.where((element) {
+  //               return element
+  //                   .get('Title')
+  //                   .toString()
+  //                   .toLowerCase()
+  //                   .contains(searchText.toLowerCase());
+  //             }).toList();
+  //           }
+  //           return ListView.builder(
+  //               physics: const NeverScrollableScrollPhysics(),
+  //               itemCount: snapshot.data?.docs.length,
+  //               shrinkWrap: true,
+  //               itemBuilder: (context, index) {
+  //                 DocumentSnapshot ds =
+  //                     snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
+  //                 return GroupChatTile(
+  //                   groupName: ds["groupName"],
+  //                   groupId: ds.id,
+  //                 );
+  //               });
+  //         } else {
+  //           return const Text("No groups to be found");
+  //         }
+  //       } else {
+  //         return const Center(child: CircularProgressIndicator());
+  //       }
+  //     },
+  //   );
+  // }
+
+  // void _runFilter(String enteredKeyword) {
+  //   List<Map<String, dynamic>> results = [];
+  //   if (enteredKeyword.isEmpty) {
+  //     // if the search field is empty or only contains white-space, we'll display all users
+  //     results = _allGroups;
+  //   } else {
+  //     results = _allUsers
+  //         .where((user) =>
+  //         user["name"].toLowerCase().contains(enteredKeyword.toLowerCase()))
+  //         .toList();
+  //     // we use the toLowerCase() method to make it case-insensitive
+  //   }
+  //
+  //   // Refresh the UI
+  //   setState(() {
+  //     _foundUsers = results;
+  //   });
+  // }
+
+  // final StreamController<List<User>> _streamController = StreamController();
+  // Stream<List> get _stream => _streamController.stream;
+  // _filter(String searchQuery) {
+  //   List<User> _filteredList = _dataFromQuerySnapShot
+  //       .where((User user) => user.name.toLowerCase().contains(searchQuery.toLowerCase()))
+  //       .toList();
+  //   _streamController.sink.add(_filteredList);
+  // }
 
   bottomButtons() {
     return tabController.index == 0
@@ -350,17 +464,35 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
               Icons.edit,
               size: 20.0,
             ))
-        : FloatingActionButton(
-            shape: const StadiumBorder(),
-            onPressed: () {
-              createGroupDialog();
-            },
-            backgroundColor: Colors.redAccent,
-            child: const Icon(
-              Icons.add,
-              size: 20.0,
+        : Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              shape: const StadiumBorder(),
+              onPressed: () {
+                createGroupDialog();
+              },
+              backgroundColor: Colors.redAccent,
+              child: const Icon(
+                Icons.add,
+                size: 20.0,
+              ),
             ),
-          );
+            const SizedBox(width: 8,),
+
+            FloatingActionButton(
+                shape: const StadiumBorder(),
+                onPressed: () {
+                  findGroupsDialog();
+                },
+                backgroundColor: Colors.redAccent,
+                child: const Icon(
+                  Icons.search,
+                  size: 20.0,
+                ),
+              ),
+          ],
+        );
   }
 
   _getUserJoinedGroups() async {
@@ -386,6 +518,15 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       // print(snapshots);
       setState(() {
         _chats = snapshots;
+      });
+    });
+  }
+
+  _getAllGroups() async {
+    getAllGroups().then((snapshots) {
+      // print(snapshots);
+      setState(() {
+        _allGroups = snapshots;
       });
     });
   }
@@ -417,23 +558,4 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       return s[2];
     }
   }
-
-  // Future<String> _destructureChatReceiverName(res) async {
-  //   var u;
-  //   String receiverID = _destructureChatReceiverId(res);
-  //   var collection = FirebaseFirestore.instance.collection('users');
-  //   collection.doc(receiverID).get().then((result){
-  //     setState(() {
-  //       recName = result.data()!["userName"];
-  //     });
-  //   });
-  //   print("og: ${u}");
-  //   return await u;
-  // }
-
-  // void getChatReceiverName(res) async {
-  //   print("here: ${_destructureChatReceiverName(res)}");
-  //   recName = await _destructureChatReceiverName(res);
-  // }
-
 }
