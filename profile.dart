@@ -98,6 +98,7 @@ class _ProfileState extends State<Profile> {
     TextEditingController userNameController = TextEditingController();
     var phoneController = TextEditingController();
     var emailController = TextEditingController();
+    String? userName, phone, email;
     return FutureBuilder(
       future: userRef.doc(FirebaseAuth.instance.currentUser!.uid).get(),
       builder: (context, AsyncSnapshot snapshot) {
@@ -119,12 +120,24 @@ class _ProfileState extends State<Profile> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: () => imageChanger(context),
-                    child: url.isEmpty ? const CircleAvatar(
+                    child: profilePhoto == null ? url == null ? const CircleAvatar(
                       backgroundColor: Colors.teal,
                       radius: 50,
                     ) : CircleAvatar(
-                      backgroundImage: NetworkImage(CachedNetworkImage(imageUrl: url)),
-            radius: 50,
+                      radius: 50,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(50),
+                        child: Image.network(url, width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,),),
+                    )
+                        : CircleAvatar(
+                      radius: 50,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(50),
+                        child: Image.file(profilePhoto!, width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,),),
                   ),
                 ),),
                 Column(children: [
@@ -151,8 +164,8 @@ class _ProfileState extends State<Profile> {
                   ),
                   TextFormField(
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the email';
+                      if ((value == null || value.isEmpty) || (value.isEmpty && phoneController.text.isEmpty)) {
+                        return 'Please enter proper details';
                       }
                       return null;
                     },
@@ -170,6 +183,7 @@ class _ProfileState extends State<Profile> {
                     height: 35,
                   ),
                   TextFormField(
+                    onFieldSubmitted: (value) {setState((){phone = value;});},
                     validator: (value) {
                       if (value == null && emailController.text == null ) {
                         return 'Please save either phone or email';
@@ -193,15 +207,18 @@ class _ProfileState extends State<Profile> {
                     height: 40,
                     minWidth: MediaQuery.of(context).size.width -
                         (2 * MediaQuery.of(context).size.width / 10),
-                    onPressed: () {
-
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Processing Data'), duration: Duration(milliseconds: 500),),
                         );
+                        print("phone is: ");
+                        print(phoneController.text);
+                        print(phone);
+                        await updateProfileData(userNameController.text, emailController.text, phone);
                       }
                     },
-                    disabledColor: const Color(0xFF274CE0).withAlpha(60),
+                    disabledColor: const Color(0xFF274CE0).withAlpha(10),
                     disabledTextColor: Colors.white,
                     color: const Color(0xFF274CE0),
                     textColor: Colors.white,
@@ -248,32 +265,52 @@ class _ProfileState extends State<Profile> {
 
 
   late File _imageFile;
+  File? profilePhoto;
   final picker = ImagePicker();
+  late String imageURL;
 
   Future pickImageFromGallery() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    setState(() {
-      _imageFile = File(pickedFile!.path);
-    });
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        profilePhoto = _imageFile;
+        imageURL = pickedFile.path;
+      });
+    }
+
+    if (pickedFile != null) {
+      uploadImageToFirebase(_imageFile.path, FirebaseAuth.instance.currentUser!.uid);
+    }
   }
 
   Future pickImageFromCamera() async {
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
-    setState(() {
-      _imageFile = File(pickedFile!.path);
-    });
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        profilePhoto = _imageFile;
+        imageURL = pickedFile.path;
+      });
+    }
+
+    if (pickedFile != null) {
+      uploadImageToFirebase(_imageFile.path, FirebaseAuth.instance.currentUser!.uid);
+    }
   }
 
-  Future uploadImageToFirebase(BuildContext context) async {
-    String fileName = basename(_imageFile.path);
+  Future uploadImageToFirebase(String path, String uid) async {
+    String fileName = basename(path);
     FirebaseStorage storage = FirebaseStorage.instance;
     Reference ref = storage.ref().child('uploads/$fileName');
     UploadTask uploadTask = ref.putFile(_imageFile);
     TaskSnapshot taskSnapshot = await uploadTask;
+
+    CollectionReference collectionReference = FirebaseFirestore.instance.collection("users");
     taskSnapshot.ref.getDownloadURL().then(
-          (value) => print("Done: $value"),
+          (value) async => await collectionReference.doc(uid).update({'photo' : value})
     );
   }
 
