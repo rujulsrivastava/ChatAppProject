@@ -8,6 +8,11 @@ getAllUsers() async {
   return snapshot;
 }
 
+getAllGroups() async {
+  var snapshot = await FirebaseFirestore.instance.collection("chatgroups").orderBy("groupName").snapshots();
+  return snapshot;
+}
+
 getUserGroups(String uid) async {
   return FirebaseFirestore.instance.collection("users").doc(uid).snapshots();
 }
@@ -34,6 +39,20 @@ getUserGroupMessages(String groupId) async {
 getUserPersonalMessages(docID) async {
   return FirebaseFirestore.instance.collection('personalchats').doc(docID).collection('messages').orderBy('time').snapshots();
 }
+
+
+Future<bool> isUserJoined(String groupID, String groupName) async {
+  String uid = FirebaseAuth.instance.currentUser!.uid;
+  DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+  DocumentSnapshot userDocSnapshot = await userDocRef.get();
+  List<dynamic> groups = await userDocSnapshot.get("usergroups");
+  if(groups.contains('${groupID}_$groupName')) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 
 Future togglingGroupJoin(String groupId, String groupName, String userName) async {
   String uid = FirebaseAuth.instance.currentUser!.uid;
@@ -114,12 +133,12 @@ Future<void> createUser(MyUser user) async {
   } catch (e) {print(e.toString());}
 }
 
-updateProfileData(String userName, String? email, String? phone) async {
+updateProfileData(String? userName, String? email, String? phone) async {
   FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
   FirebaseAuth auth = FirebaseAuth.instance;
   try {
     await auth.currentUser!.updateDisplayName(userName);
-    await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).set(
+    await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).update(
         {
           "userName" : userName,
           "phone" : phone ?? "",
