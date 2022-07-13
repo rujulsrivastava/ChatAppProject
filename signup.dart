@@ -14,7 +14,7 @@ class SignUp extends StatefulWidget {
 class _SignUpState extends State<SignUp> {
   late TextEditingController userNameController = TextEditingController();
   late TextEditingController pwdController = TextEditingController();
-  late TextEditingController phoneController = TextEditingController();
+  late TextEditingController phoneOrEmailController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +79,7 @@ class _SignUpState extends State<SignUp> {
                     height: 15,
                   ),
                   customTextField(
-                      "Phone", "Enter your phone number", phoneController),
+                      "Phone/Email", "Enter your phone number or email", phoneOrEmailController),
                   const SizedBox(height: 26),
                   customTextField(
                       "Username", "Enter your username", userNameController),
@@ -95,9 +95,11 @@ class _SignUpState extends State<SignUp> {
                         (2 * MediaQuery.of(context).size.width / 10),
                     onPressed: userNameController.text.isNotEmpty &&
                             pwdController.text.isNotEmpty &&
-                            pwdController.text.isNotEmpty
-                        ? () => signUp(context, phoneController.text,
-                            userNameController.text, pwdController.text)
+                           phoneOrEmailController.text.isNotEmpty
+                        ? () async {
+                      await signUp(context, phoneOrEmailController.text,
+                          userNameController.text, pwdController.text);
+                    }
                         : null,
                     disabledColor: const Color(0xFF274CE0).withAlpha(60),
                     disabledTextColor: Colors.white,
@@ -147,57 +149,3 @@ class _SignUpState extends State<SignUp> {
   }
 }
 
-// class SignUp extends StatefulWidget {
-//   const SignUp({Key? key}) : super(key: key);
-//
-//   @override
-//   State<SignUp> createState() => _SignUpState();
-// }
-//
-// class _SignUpState extends State<SignUp> {
-//
-//   final auth = FirebaseAuth.instance;
-//
-//   TextEditingController phoneController = TextEditingController();
-//   TextEditingController emailController = TextEditingController();
-//   TextEditingController pwdController = TextEditingController();
-//   TextEditingController userNameController = TextEditingController();
-//
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//         // backgroundColor: blueColor,
-//         // appBar: AppBar(title: const Text("Sign Up For Capital"),),
-//         body: Column(
-//             crossAxisAlignment: CrossAxisAlignment.center,
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: <Widget> [
-//               // TextField(controller: emailController, decoration: const InputDecoration(hintText: "Email ID"), keyboardType: TextInputType.emailAddress,),
-//               TextField(controller: phoneController, decoration: const InputDecoration(hintText: "Phone"), keyboardType: TextInputType.phone, ),
-//               TextField(controller: userNameController, decoration: const InputDecoration(hintText: "Username"), ),
-//               TextField(controller: pwdController, decoration: const InputDecoration(hintText: "Password"), obscureText: true,),
-//               ElevatedButton(
-//                   // style: ButtonStyle(backgroundColor: blueColorMaterial, foregroundColor: whiteColorMaterial),
-//                   child: const Text("Register"),
-//                   onPressed: () async {
-//                     await createAccount(context, phoneController.text, pwdController.text, userNameController.text);
-//
-//                     // try {
-//                     //   await auth.verifyPhoneNumber(phoneNumber: phone,
-//                     //       verificationCompleted: (PhoneAuthCredential cred) async {
-//                     //     await auth.signInWithCredential(cred);
-//                     //     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Home(userName: username,)));},
-//                     //       verificationFailed: (FirebaseAuthException authException) async {
-//                     //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authException.toString())));},
-//                     //       codeSent: (String verificationID, int? resendToken) {},
-//                     //   codeAutoRetrievalTimeout: (String verificationID) {});
-//                     // } catch (e) {
-//                     //   print(e);
-//                   }
-//               ),
-//             ]
-//         )
-//     );
-//   }
-// }
