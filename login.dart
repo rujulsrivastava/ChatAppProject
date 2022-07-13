@@ -1,3 +1,4 @@
+import 'package:chat_app_project/firebase_services/auth.dart';
 import 'package:chat_app_project/pages/signup.dart';
 import 'package:chat_app_project/pages/splash.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +13,7 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  late TextEditingController userNameController = TextEditingController();
+  late TextEditingController emailController = TextEditingController();
   late TextEditingController pwdController = TextEditingController();
   @override
   Widget build(BuildContext context) {
@@ -83,7 +84,7 @@ class _LoginState extends State<Login> {
                   const SizedBox(
                     height: 30,
                   ),
-                  customTextField("Username", "Enter your username", userNameController),
+                  customTextField("Email", "Enter your email ID", emailController),
                   const SizedBox(height: 26),
                   customTextField("Password", "Enter your password", pwdController),
                   Padding(
@@ -98,7 +99,10 @@ class _LoginState extends State<Login> {
               MaterialButton(
                 height: 40,
                 minWidth: MediaQuery.of(context).size.width-(2*MediaQuery.of(context).size.width/10),
-                onPressed: userNameController.text.isNotEmpty && pwdController.text.isNotEmpty ? () => const SignUp() : null,
+                onPressed: emailController.text.isNotEmpty && pwdController.text.isNotEmpty ? () async {
+
+                  await signInWithEmail(context, emailController.text, pwdController.text);
+                } : null,
                 disabledColor: const Color(0xFF274CE0).withAlpha(60),
                 disabledTextColor: Colors.white,
                 color: const Color(0xFF274CE0),
