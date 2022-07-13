@@ -59,12 +59,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         backgroundColor: const Color(0xFF274CE0),
         leading: Builder(
             builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: () {
-                    Scaffold.of(context).openDrawer();
-                  },
-                  // tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-                )),
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              // tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            )),
         title: Text("Hi ${widget.userName}"),
         centerTitle: true,
         bottom: TabBar(
@@ -137,10 +137,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             onPressed: controller.text == null
                 ? null
                 : () {
-                    createGroup(controller.text, auth.currentUser!.displayName!,
-                        auth.currentUser!.uid);
-                    Navigator.of(context).pop();
-                  },
+              createGroup(controller.text, auth.currentUser!.displayName!,
+                  auth.currentUser!.uid);
+              Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.check)),
       ],
     );
@@ -174,7 +174,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         shrinkWrap: true,
                         itemBuilder: (context, index) {
                           DocumentSnapshot ds = snapshot.data?.docs[index]
-                              as DocumentSnapshot<Object?>;
+                          as DocumentSnapshot<Object?>;
                           return PersonalChatTile(
                               senderID: auth.currentUser!.uid,
                               userName: auth.currentUser!.displayName!,
@@ -235,25 +235,26 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   //   }).toList();
                   // }
 
-                    print("length issss");
-                    print(documents.length);
-                    print(documents.first.data());
+                  print("length issss");
+                  print(documents.length);
+                  print(documents.first.data());
 
-                    return Container(
-                      height: 400,
-                      width: 200,
-                      child: ListView.builder(
-                          scrollDirection: Axis.vertical,
-                          itemCount: documents.length,
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
-                            DocumentSnapshot ds = documents[index];
-                            return GroupChatTile(
-                              groupName: ds["groupName"],
-                              groupId: ds.id,
-                            );
-                          }),
-                    );
+                  return Container(
+                    height: 400,
+                    width: 200,
+                    child: ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        itemCount: documents.length,
+                        shrinkWrap: true,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot ds = documents[index];
+                          return GroupChatTile(
+                            groupName: ds["groupName"],
+                            groupId: ds.id,
+                            groupIcon: ds["groupIcon"] ?? "",
+                          );
+                        }),
+                  );
 
 
                 } else {
@@ -326,7 +327,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 shrinkWrap: true,
                 itemBuilder: (context, index) {
                   DocumentSnapshot ds =
-                      snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
+                  snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
                   return PersonalChatTile(
                     senderID: auth.currentUser!.uid,
                     receiverID: ds.id,
@@ -385,114 +386,45 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     );
   }
 
-  // Widget renderAllGroups() {
-  //   return StreamBuilder(
-  //     stream: FirebaseFirestore.instance.collection('chatgroups').snapshots(),
-  //     builder: (context,
-  //         AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>> snapshot) {
-  //
-  //
-  //       if (snapshot.hasData) {
-  //         // print(snapshot.data!['chatgroups'].length);
-  //         if (snapshot.data?.size != 0) {
-  //           if (searchText.length > 0) {
-  //             documents = documents.where((element) {
-  //               return element
-  //                   .get('Title')
-  //                   .toString()
-  //                   .toLowerCase()
-  //                   .contains(searchText.toLowerCase());
-  //             }).toList();
-  //           }
-  //           return ListView.builder(
-  //               physics: const NeverScrollableScrollPhysics(),
-  //               itemCount: snapshot.data?.docs.length,
-  //               shrinkWrap: true,
-  //               itemBuilder: (context, index) {
-  //                 DocumentSnapshot ds =
-  //                     snapshot.data?.docs[index] as DocumentSnapshot<Object?>;
-  //                 return GroupChatTile(
-  //                   groupName: ds["groupName"],
-  //                   groupId: ds.id,
-  //                 );
-  //               });
-  //         } else {
-  //           return const Text("No groups to be found");
-  //         }
-  //       } else {
-  //         return const Center(child: CircularProgressIndicator());
-  //       }
-  //     },
-  //   );
-  // }
-
-  // void _runFilter(String enteredKeyword) {
-  //   List<Map<String, dynamic>> results = [];
-  //   if (enteredKeyword.isEmpty) {
-  //     // if the search field is empty or only contains white-space, we'll display all users
-  //     results = _allGroups;
-  //   } else {
-  //     results = _allUsers
-  //         .where((user) =>
-  //         user["name"].toLowerCase().contains(enteredKeyword.toLowerCase()))
-  //         .toList();
-  //     // we use the toLowerCase() method to make it case-insensitive
-  //   }
-  //
-  //   // Refresh the UI
-  //   setState(() {
-  //     _foundUsers = results;
-  //   });
-  // }
-
-  // final StreamController<List<User>> _streamController = StreamController();
-  // Stream<List> get _stream => _streamController.stream;
-  // _filter(String searchQuery) {
-  //   List<User> _filteredList = _dataFromQuerySnapShot
-  //       .where((User user) => user.name.toLowerCase().contains(searchQuery.toLowerCase()))
-  //       .toList();
-  //   _streamController.sink.add(_filteredList);
-  // }
-
   bottomButtons() {
     return tabController.index == 0
         ? FloatingActionButton(
-            shape: const StadiumBorder(),
-            onPressed: findUsersDialog,
-            backgroundColor: Colors.redAccent,
-            child: const Icon(
-              Icons.edit,
-              size: 20.0,
-            ))
+        shape: const StadiumBorder(),
+        onPressed: findUsersDialog,
+        backgroundColor: Colors.redAccent,
+        child: const Icon(
+          Icons.edit,
+          size: 20.0,
+        ))
         : Row(
       mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              shape: const StadiumBorder(),
-              onPressed: () {
-                createGroupDialog();
-              },
-              backgroundColor: Colors.redAccent,
-              child: const Icon(
-                Icons.add,
-                size: 20.0,
-              ),
-            ),
-            const SizedBox(width: 8,),
+      children: [
+        FloatingActionButton(
+          shape: const StadiumBorder(),
+          onPressed: () {
+            createGroupDialog();
+          },
+          backgroundColor: Colors.redAccent,
+          child: const Icon(
+            Icons.add,
+            size: 20.0,
+          ),
+        ),
+        const SizedBox(width: 8,),
 
-            FloatingActionButton(
-                shape: const StadiumBorder(),
-                onPressed: () {
-                  findGroupsDialog();
-                },
-                backgroundColor: Colors.redAccent,
-                child: const Icon(
-                  Icons.search,
-                  size: 20.0,
-                ),
-              ),
-          ],
-        );
+        FloatingActionButton(
+          shape: const StadiumBorder(),
+          onPressed: () {
+            findGroupsDialog();
+          },
+          backgroundColor: Colors.redAccent,
+          child: const Icon(
+            Icons.search,
+            size: 20.0,
+          ),
+        ),
+      ],
+    );
   }
 
   _getUserJoinedGroups() async {
