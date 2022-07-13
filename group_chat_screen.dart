@@ -11,23 +11,30 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 
 import '../firebase_services/messaging.dart';
-import '../utils/picking_images.dart';
 
 class GroupChatPage extends StatefulWidget {
 
   final String groupId;
   final String groupName;
+  String? groupIconPath;
+  final bool isUserJoined;
 
-  GroupChatPage({
+  GroupChatPage({Key? key,
     required this.groupId,
-    required this.groupName
-  });
+    required this.groupName,
+    this.groupIconPath,
+    required this.isUserJoined,
+  }) : super(key: key);
 
   @override
   _GroupChatPageState createState() => _GroupChatPageState();
 }
 
 class _GroupChatPageState extends State<GroupChatPage> {
+
+  File? _imageFile;
+  File? _groupIcon;
+  final picker = ImagePicker();
 
   late Stream<QuerySnapshot<Map<String, dynamic>>> _chats;
   TextEditingController messageEditingController = TextEditingController();
@@ -80,23 +87,54 @@ class _GroupChatPageState extends State<GroupChatPage> {
 
   @override
   void initState() {
-    super.initState();
     getUserGroupMessages(widget.groupId).then((val) {
       // print(val);
       setState(() {
         _chats = val;
       });
     });
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => groupIconChanger(context),
+            child: _groupIcon == null ? widget.groupIconPath == null ?
+
+            CircleAvatar(
+              radius: 20.0,
+              backgroundColor: Colors.white,
+              child: Text(widget.groupName.substring(0, 1).toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF043F4A),)),
+            )
+          : CircleAvatar(
+            radius: 20.0,
+            backgroundColor: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.network(widget.groupIconPath!, width: 120,
+                height: 120,
+                fit: BoxFit.cover,),),) :
+            CircleAvatar(
+              radius: 50,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: Image.file(_groupIcon!, width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,),),
+            ),),
+        ),
         title: Text(widget.groupName, style: const TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: const Color(0xFF043F4A),
         elevation: 0.0,
+
       ),
       body: Container(
         child: Stack(
@@ -114,12 +152,13 @@ class _GroupChatPageState extends State<GroupChatPage> {
                     Expanded(
                       child: TextField(
                         controller: messageEditingController,
+                        enabled: widget.isUserJoined,
                         style: const TextStyle(
                             color: Colors.white
                         ),
-                        decoration: const InputDecoration(
-                            hintText: "Send a message ...",
-                            hintStyle: TextStyle(
+                        decoration: InputDecoration(
+                            hintText: widget.isUserJoined ? "Send a message ..." : "You cannot send messages yet..",
+                            hintStyle: const TextStyle(
                               color: Colors.white38,
                               fontSize: 16,
                             ),
@@ -128,25 +167,29 @@ class _GroupChatPageState extends State<GroupChatPage> {
                       ),
                     ),
 
-                    SizedBox(width: 12.0),
+                    const SizedBox(width: 12.0),
 
-                    GestureDetector(
-                      onTap: () {
-                        _attachImage(context);
-                      },
-                      child: Container(
-                        height: 50.0,
-                        width: 50.0,
-                        decoration: BoxDecoration(
-                            color: const Color(0xFF043F4A),
-                            borderRadius: BorderRadius.circular(50)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          widget.isUserJoined == true ? imageAttacher(context) : null;
+                        },
+                        child: Container(
+                          height: 50.0,
+                          width: 50.0,
+                          decoration: BoxDecoration(
+                              color: const Color(0xFF043F4A),
+                              borderRadius: BorderRadius.circular(50)
+                          ),
+                          child: const Center(child: Icon(Icons.attach_file, color: Colors.white)),
                         ),
-                        child: const Center(child: Icon(Icons.attach_file, color: Colors.white)),
                       ),
                     ),
                     GestureDetector(
                       onTap: () {
-                        _sendMessage();
+                        widget.isUserJoined == true ? _sendMessage() : null;
+
                       },
                       child: Container(
                         height: 50.0,
@@ -168,11 +211,11 @@ class _GroupChatPageState extends State<GroupChatPage> {
       ),
     );
   }
-  _attachImage(BuildContext context) {
+  imageAttacher(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext context) {
-        return Container(
+        return SizedBox(
           height: 100,
           // color: Colors.amber,
           child: Center(
@@ -180,8 +223,42 @@ class _GroupChatPageState extends State<GroupChatPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.camera_alt_outlined)),
-                IconButton(onPressed: () { Navigator.of(context).pop();}, icon: const Icon(Icons.photo)),
+                IconButton(onPressed: () {
+                  pickImageFromCamera();
+                  // Navigator.of(context).pop();
+                }, icon: const Icon(Icons.camera_alt_outlined)),
+                IconButton(onPressed: () {
+                  pickImageFromGallery();
+                  // Navigator.of(context).pop();
+                }, icon: const Icon(Icons.photo)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  groupIconChanger(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return SizedBox(
+          height: 100,
+          // color: Colors.amber,
+          child: Center(
+            child: Row (
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(onPressed: () {
+                  setImageFromCamera();
+                  // Navigator.of(context).pop();
+                }, icon: const Icon(Icons.camera_alt_outlined)),
+                IconButton(onPressed: () {
+                  setImageFromGallery();
+                  // Navigator.of(context).pop();
+                }, icon: const Icon(Icons.photo)),
               ],
             ),
           ),
@@ -206,11 +283,6 @@ class _GroupChatPageState extends State<GroupChatPage> {
       });
     }
   }
-  late File _imageFile;
-  File? profilePhoto;
-  final picker = ImagePicker();
-  late String imageURL;
-
 
   Future pickImageFromGallery() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -218,13 +290,11 @@ class _GroupChatPageState extends State<GroupChatPage> {
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        profilePhoto = _imageFile;
-        imageURL = pickedFile.path;
       });
     }
 
     if (pickedFile != null) {
-      uploadImageToFirebase(_imageFile.path, FirebaseAuth.instance.currentUser!.uid);
+      uploadImageToFirebase(_imageFile!.path);
     }
   }
 
@@ -234,26 +304,58 @@ class _GroupChatPageState extends State<GroupChatPage> {
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        profilePhoto = _imageFile;
-        imageURL = pickedFile.path;
       });
     }
 
     if (pickedFile != null) {
-      uploadImageToFirebase(_imageFile.path, FirebaseAuth.instance.currentUser!.uid);
+      uploadImageToFirebase(_imageFile!.path);
     }
   }
-
-  Future uploadImageToFirebase(String path, String uid) async {
+  Future uploadImageToFirebase(String path) async {
     String fileName = basename(path);
     FirebaseStorage storage = FirebaseStorage.instance;
     Reference ref = storage.ref().child('uploads/$fileName');
-    UploadTask uploadTask = ref.putFile(_imageFile);
+    UploadTask uploadTask = ref.putFile(_imageFile!);
     TaskSnapshot taskSnapshot = await uploadTask;
-
-    CollectionReference collectionReference = FirebaseFirestore.instance.collection("users");
     taskSnapshot.ref.getDownloadURL().then(
-            (value) async => await collectionReference.doc(uid).update({'photo' : value})
+            (value) => _sendImage(value)
     );
   }
+
+  Future setImageFromGallery() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _groupIcon = File(pickedFile.path);
+      });
+      uploadGroupIconToFirebase(pickedFile.path);
+    }
+  }
+
+  Future setImageFromCamera() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _groupIcon = File(pickedFile.path);
+      });
+      uploadGroupIconToFirebase(pickedFile.path);
+    }
+  }
+
+  Future uploadGroupIconToFirebase(String path) async {
+    String fileName = basename(path);
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference ref = storage.ref().child('groupIcons/${widget.groupId}/$fileName');
+    UploadTask uploadTask = ref.putFile(_groupIcon!);
+    TaskSnapshot taskSnapshot = await uploadTask;
+
+    CollectionReference collectionReference = FirebaseFirestore.instance.collection("chatgroups");
+    taskSnapshot.ref.getDownloadURL().then(
+            (value) async => await collectionReference.doc(widget.groupId).update({'groupIcon' : value})
+    );
+  }
+
+
 }
