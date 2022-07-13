@@ -17,17 +17,6 @@ getUserGroups(String uid) async {
   return FirebaseFirestore.instance.collection("users").doc(uid).snapshots();
 }
 
-Future<bool> checkIfCollectionExist(String uid) {
-  return FirebaseFirestore.instance.collection("users")
-      .doc(uid)
-      .collection("userchats")
-      .limit(1)
-      .get()
-      .then((value) {
-    return value.docs.isNotEmpty;
-  });
-}
-
 getUserChats(String uid) async {
   return FirebaseFirestore.instance.collection("users").doc(uid).snapshots();
 }
@@ -41,12 +30,12 @@ getUserPersonalMessages(docID) async {
 }
 
 
-Future<bool> isUserJoined(String groupID, String groupName) async {
+Future<bool> isUserJoined(String groupID) async {
   String uid = FirebaseAuth.instance.currentUser!.uid;
-  DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
-  DocumentSnapshot userDocSnapshot = await userDocRef.get();
-  List<dynamic> groups = await userDocSnapshot.get("usergroups");
-  if(groups.contains('${groupID}_$groupName')) {
+  DocumentReference groupChatDocRef = FirebaseFirestore.instance.collection('chatgroups').doc(groupID);
+  DocumentSnapshot groupChatDocSnapshot = await groupChatDocRef.get();
+  List<dynamic> members = await groupChatDocSnapshot.get("members");
+  if(members.contains('${uid}')) {
     return true;
   } else {
     return false;
@@ -54,7 +43,7 @@ Future<bool> isUserJoined(String groupID, String groupName) async {
 }
 
 
-Future togglingGroupJoin(String groupId, String groupName, String userName) async {
+Future togglingGroupJoin(String groupId, String groupName) async {
   String uid = FirebaseAuth.instance.currentUser!.uid;
   DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
   DocumentSnapshot userDocSnapshot = await userDocRef.get();
@@ -70,7 +59,7 @@ Future togglingGroupJoin(String groupId, String groupName, String userName) asyn
     });
 
     await groupDocRef.update({
-      'groupmembers': FieldValue.arrayRemove(['${uid}_$userName'])
+      'members': FieldValue.arrayRemove([uid])
     });
   }
   else {
@@ -80,7 +69,7 @@ Future togglingGroupJoin(String groupId, String groupName, String userName) asyn
     });
 
     await groupDocRef.update({
-      'groupmembers': FieldValue.arrayUnion(['${uid}_$userName'])
+      'members': FieldValue.arrayUnion([uid])
     });
   }
 }
@@ -101,7 +90,7 @@ Future createGroup(String groupName, String userName, String uid) async {
       });
 
   await groupDocRef.update({
-    'members': FieldValue.arrayUnion(['${uid}_$userName']),
+    'members': FieldValue.arrayUnion([uid]),
     'groupId': groupDocRef.id,
   });
 
@@ -133,17 +122,24 @@ Future<void> createUser(MyUser user) async {
   } catch (e) {print(e.toString());}
 }
 
-updateProfileData(String? userName, String? email, String? phone) async {
+updateProfileData({String? email, String? phone}) async {
   FirebaseFirestore firebaseFirestore = FirebaseFirestore.instance;
   FirebaseAuth auth = FirebaseAuth.instance;
   try {
-    await auth.currentUser!.updateDisplayName(userName);
-    await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).update(
-        {
-          "userName" : userName,
-          "phone" : phone ?? "",
-          "email" : email ?? "",
-        }
-    );
+    if (email != null && email.isNotEmpty) {
+      await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).update(
+          {
+            "email" : email
+          }
+      );
+    }
+    if (phone != null && phone.isNotEmpty) {
+      await firebaseFirestore.collection("users").doc(auth.currentUser!.uid).update(
+          {
+            "phone" : phone
+          }
+      );
+    }
+
   } catch (e) {print(e.toString());}
 }
