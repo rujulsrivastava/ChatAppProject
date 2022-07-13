@@ -1,14 +1,9 @@
 import 'dart:io';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chat_app_project/firebase_services/database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 import '../customs/user_model.dart';
@@ -25,7 +20,8 @@ final userRef = FirebaseFirestore.instance.collection("users");
 class _ProfileState extends State<Profile> {
   final _formKey = GlobalKey<FormState>();
   late File? image;
-
+  String? userName;
+  String? phone, email;
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
@@ -98,7 +94,6 @@ class _ProfileState extends State<Profile> {
     TextEditingController userNameController = TextEditingController();
     var phoneController = TextEditingController();
     var emailController = TextEditingController();
-    String? userName, phone, email;
     return FutureBuilder(
       future: userRef.doc(FirebaseAuth.instance.currentUser!.uid).get(),
       builder: (context, AsyncSnapshot snapshot) {
@@ -112,6 +107,9 @@ class _ProfileState extends State<Profile> {
           emailController.text = user.email ?? "";
           String? url = user.photo;
           return Form(
+            onChanged: () {
+              Form.of(primaryFocus!.context!)!.save();
+            },
             key: _formKey,
             child: Column(
               children: [
@@ -120,7 +118,7 @@ class _ProfileState extends State<Profile> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: () => imageChanger(context),
-                    child: profilePhoto == null ? url == null ? const CircleAvatar(
+                    child: profilePhoto == null ? url.isEmpty ? const CircleAvatar(
                       backgroundColor: Colors.teal,
                       radius: 50,
                     ) : CircleAvatar(
@@ -138,10 +136,11 @@ class _ProfileState extends State<Profile> {
                         child: Image.file(profilePhoto!, width: 120,
                           height: 120,
                           fit: BoxFit.cover,),),
-                  ),
-                ),),
+                    ),
+                  ),),
                 Column(children: [
                   TextFormField(
+                    enabled: false,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter the username';
@@ -151,6 +150,7 @@ class _ProfileState extends State<Profile> {
                     onChanged: (value) {
                       setState(() {
                         userNameController.text = value;
+                        userName = value;
                       });
                     },
                     initialValue: user.userName,
@@ -171,10 +171,10 @@ class _ProfileState extends State<Profile> {
                     },
                     onChanged: (value) {
                       setState(() {
-                        emailController.text = value;
+                        email = value;
                       });
                     },
-                    initialValue: emailController.text,
+                    initialValue: user.email,
                     decoration: const InputDecoration(
                       labelText: "Email",
                     ),
@@ -183,7 +183,7 @@ class _ProfileState extends State<Profile> {
                     height: 35,
                   ),
                   TextFormField(
-                    onFieldSubmitted: (value) {setState((){phone = value;});},
+                    onSaved: (value) {setState((){phone = value!;});},
                     validator: (value) {
                       if (value == null && emailController.text == null ) {
                         return 'Please save either phone or email';
@@ -192,10 +192,11 @@ class _ProfileState extends State<Profile> {
                     },
                     onChanged: (value) {
                       setState(() {
-                        phoneController.text = value;
+                        print(value);
+                        phone = value;
                       });
                     },
-                    initialValue: phoneController.text,
+                    initialValue: user.phone,
                     decoration: const InputDecoration(
                       labelText: "Phone",
                     ),
@@ -215,7 +216,7 @@ class _ProfileState extends State<Profile> {
                         print("phone is: ");
                         print(phoneController.text);
                         print(phone);
-                        await updateProfileData(userNameController.text, emailController.text, phone);
+                        await updateProfileData(email: email, phone: phone);
                       }
                     },
                     disabledColor: const Color(0xFF274CE0).withAlpha(10),
@@ -250,11 +251,11 @@ class _ProfileState extends State<Profile> {
                 IconButton(onPressed: () {
                   pickImageFromCamera();
                   // Navigator.of(context).pop();
-                  }, icon: const Icon(Icons.camera_alt_outlined)),
+                }, icon: const Icon(Icons.camera_alt_outlined)),
                 IconButton(onPressed: () {
                   pickImageFromGallery();
                   // Navigator.of(context).pop();
-                  }, icon: const Icon(Icons.photo)),
+                }, icon: const Icon(Icons.photo)),
               ],
             ),
           ),
@@ -310,7 +311,7 @@ class _ProfileState extends State<Profile> {
 
     CollectionReference collectionReference = FirebaseFirestore.instance.collection("users");
     taskSnapshot.ref.getDownloadURL().then(
-          (value) async => await collectionReference.doc(uid).update({'photo' : value})
+            (value) async => await collectionReference.doc(uid).update({'photo' : value})
     );
   }
 
