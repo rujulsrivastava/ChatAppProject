@@ -11,22 +11,21 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 
 import '../firebase_services/messaging.dart';
-import '../utils/picking_images.dart';
 
 class PersonalChatPage extends StatefulWidget {
 
   final String receiverName;
-  // final String senderName;
   final String senderID;
   final String receiverID;
   late String chatID;
+  String? photoPath;
 
   PersonalChatPage({
     required this.receiverName,
-    // required this.senderName,
     required this.senderID,
     required this.receiverID,
     required this.chatID,
+    this.photoPath
   });
 
   @override
@@ -99,19 +98,39 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
 
   @override
   void initState() {
-    super.initState();
     getUserPersonalMessages(widget.chatID).then((val) {
-      // print(val);
       setState(() {
         _chats = val;
       });
     });
+    super.initState();
+
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: widget.photoPath == null ?
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: CircleAvatar(
+            radius: 20.0,
+            backgroundColor: Colors.white,
+            child: Text(widget.receiverName.substring(0, 1).toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF043F4A),)),
+          ),
+        )
+            : Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+          radius: 20.0,
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.network(widget.photoPath!, width: 120,
+                height: 120,
+                fit: BoxFit.cover,),),
+        ),
+            ),
         title: Text(widget.receiverName, style: const TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: const Color(0xFF043F4A),
@@ -149,18 +168,21 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
 
                     SizedBox(width: 12.0),
 
-                    GestureDetector(
-                      onTap: () {
-                        _attachImage(context);
-                      },
-                      child: Container(
-                        height: 50.0,
-                        width: 50.0,
-                        decoration: BoxDecoration(
-                            color: const Color(0xFF043F4A),
-                            borderRadius: BorderRadius.circular(50)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          _attachImage(context);
+                        },
+                        child: Container(
+                          height: 50.0,
+                          width: 50.0,
+                          decoration: BoxDecoration(
+                              color: const Color(0xFF043F4A),
+                              borderRadius: BorderRadius.circular(50)
+                          ),
+                          child: const Center(child: Icon(Icons.attach_file, color: Colors.white)),
                         ),
-                        child: const Center(child: Icon(Icons.attach_file, color: Colors.white)),
                       ),
                     ),
                     GestureDetector(
@@ -191,7 +213,6 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
   late File _imageFile;
   File? profilePhoto;
   final picker = ImagePicker();
-  late String imageURL;
 
   _attachImage(BuildContext context) {
     showModalBottomSheet<void>(
@@ -201,18 +222,29 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
           height: 100,
           // color: Colors.amber,
           child: Center(
-            child: Row (
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+            child: Column (
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                IconButton(onPressed: () {
-                  pickImageFromCamera();
-                  Navigator.of(context).pop();
-                  }, icon: const Icon(Icons.camera_alt_outlined)),
-                IconButton(onPressed: () {
-                  pickImageFromGallery();
-                  Navigator.of(context).pop();
-                  }, icon: const Icon(Icons.photo)),
+                const Text("Pick image", style: TextStyle(fontSize: 15),),
+                Row(
+                  children: [
+                    IconButton(onPressed: () {
+                      pickImageFromCamera();
+                      Navigator.of(context).pop();
+                      }, icon: const Icon(Icons.camera_alt_outlined)),
+                    const Text("From Camera"),
+                  ],
+                ),
+                Row(
+                  children: [
+                    IconButton(onPressed: () {
+                      pickImageFromGallery();
+                      Navigator.of(context).pop();
+                      }, icon: const Icon(Icons.photo)),
+                    const Text("From Gallery"),
+                  ],
+                ),
               ],
             ),
           ),
@@ -221,13 +253,13 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
     );
   }
 
+
   Future pickImageFromGallery() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        imageURL = pickedFile.path;
       });
     }
 
@@ -242,7 +274,6 @@ class _PersonalChatPageState extends State<PersonalChatPage> {
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        imageURL = pickedFile.path;
       });
     }
 
