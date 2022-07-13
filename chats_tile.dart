@@ -7,8 +7,9 @@ import '../pages/personal_chat_screen.dart';
 class GroupChatTile extends StatefulWidget {
   late String groupName;
   final String groupId;
+  String? groupIcon;
 
-  GroupChatTile({Key? key, required this.groupName, required this.groupId,
+  GroupChatTile({Key? key, required this.groupName, required this.groupId, this.groupIcon
   }) : super(key: key);
 
   @override
@@ -34,12 +35,18 @@ class _GroupChatTileState extends State<GroupChatTile> {
             shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(10))),
             tileColor: const Color(0xFF832136),
-            leading: CircleAvatar(
+            leading: widget.groupIcon == null ? CircleAvatar(
               radius: 20.0,
               backgroundColor: Colors.white,
               child: Text(widget.groupName.substring(0, 1).toUpperCase(), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF043F4A),)),
-            ),
-
+            ) : CircleAvatar(
+              radius: 20.0,
+              backgroundColor: Colors.white,
+              child: ClipRRect(
+    borderRadius: BorderRadius.circular(50),
+    child: Image.network(widget.groupIcon!, width: 120,
+                height: 120,
+                fit: BoxFit.cover,),),),
 
             title: Text(widget.groupName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
             // subtitle: const Text("Join the conversation", style: TextStyle(fontSize: 10.0, color: Colors.white)),
@@ -72,7 +79,7 @@ class _PersonalChatTileState extends State<PersonalChatTile> {
     } else if (widget.senderID == widget.receiverID){
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something is fishy..")));
     } else {
-    chatID = '${widget.receiverID}-${widget.senderID}-${widget.receiverName}-${widget.userName}';
+      chatID = '${widget.receiverID}-${widget.senderID}-${widget.receiverName}-${widget.userName}';
     }
   }
 
